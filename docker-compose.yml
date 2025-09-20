@@ -1,0 +1,113 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: mincommerce-postgres
+    environment:
+      POSTGRES_DB: mincommerce
+      POSTGRES_USER: mincommerce_user
+      POSTGRES_PASSWORD: mincommerce_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./mincommerce-rest/migrations:/docker-entrypoint-initdb.d
+    networks:
+      - mincommerce-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mincommerce_user -d mincommerce"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis Cache & Queue
+  redis:
+    image: redis:7-alpine
+    container_name: mincommerce-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - mincommerce-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    command: redis-server --appendonly yes
+
+  # Express.js API Server
+  api:
+    build:
+      context: ./mincommerce-rest
+      dockerfile: Dockerfile
+    container_name: mincommerce-api
+    ports:
+      - "3001:3001"
+    environment:
+      NODE_ENV: development
+      PORT: 3001
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: mincommerce
+      DB_USER: mincommerce_user
+      DB_PASSWORD: mincommerce_password
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./mincommerce-rest:/app
+      - /app/node_modules
+    networks:
+      - mincommerce-network
+    restart: unless-stopped
+
+  # React Frontend
+  frontend:
+    build:
+      context: ./mincommerce-app
+      dockerfile: Dockerfile
+    container_name: mincommerce-frontend
+    ports:
+      - "3000:3000"
+    environment:
+      REACT_APP_API_URL: http://localhost:3001
+      REACT_APP_WS_URL: ws://localhost:3001
+    depends_on:
+      - api
+    volumes:
+      - ./mincommerce-app:/app
+      - /app/node_modules
+    networks:
+      - mincommerce-network
+    restart: unless-stopped
+
+  # Nginx Load Balancer (for future scaling)
+  nginx:
+    image: nginx:alpine
+    container_name: mincommerce-nginx
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - api
+      - frontend
+    networks:
+      - mincommerce-network
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  mincommerce-network:
+    driver: bridge
