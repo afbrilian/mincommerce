@@ -15,7 +15,7 @@ const generateTestData = {
     user_id: uuidv4(),
     email: `test-${Date.now()}@example.com`,
     created_at: new Date(),
-    ...overrides
+    ...overrides,
   }),
 
   product: (overrides = {}) => ({
@@ -26,7 +26,7 @@ const generateTestData = {
     image_url: 'https://example.com/image.jpg',
     created_at: new Date(),
     updated_at: new Date(),
-    ...overrides
+    ...overrides,
   }),
 
   stock: (productId, overrides = {}) => ({
@@ -36,7 +36,7 @@ const generateTestData = {
     available_quantity: 100,
     reserved_quantity: 0,
     last_updated: new Date(),
-    ...overrides
+    ...overrides,
   }),
 
   flashSale: (productId, overrides = {}) => {
@@ -49,7 +49,7 @@ const generateTestData = {
       status: 'upcoming',
       created_at: now,
       updated_at: now,
-      ...overrides
+      ...overrides,
     };
   },
 
@@ -60,8 +60,8 @@ const generateTestData = {
     status: 'pending',
     created_at: new Date(),
     updated_at: new Date(),
-    ...overrides
-  })
+    ...overrides,
+  }),
 };
 
 /**
@@ -73,13 +73,7 @@ const dbHelpers = {
    */
   async clearAllData() {
     const db = getDatabase();
-    const tables = [
-      'orders',
-      'flash_sales',
-      'stocks',
-      'products',
-      'users'
-    ];
+    const tables = ['orders', 'flash_sales', 'stocks', 'products', 'users'];
 
     for (const table of tables) {
       await db(table).del();
@@ -97,16 +91,25 @@ const dbHelpers = {
   },
 
   /**
+   * Find user by email
+   */
+  async findUserByEmail(email) {
+    const UserRepository = require('../../src/repositories/UserRepository');
+    const userRepo = new UserRepository();
+    return await userRepo.findByEmail(email);
+  },
+
+  /**
    * Create test product with stock
    */
   async createProductWithStock(productData = {}, stockData = {}) {
     const db = getDatabase();
     const product = generateTestData.product(productData);
     await db('products').insert(product);
-    
+
     const stock = generateTestData.stock(product.product_id, stockData);
     await db('stocks').insert(stock);
-    
+
     return { product, stock };
   },
 
@@ -167,11 +170,8 @@ const dbHelpers = {
    */
   async getOrderByUserAndProduct(userId, productId) {
     const db = getDatabase();
-    return await db('orders')
-      .where('user_id', userId)
-      .where('product_id', productId)
-      .first();
-  }
+    return await db('orders').where('user_id', userId).where('product_id', productId).first();
+  },
 };
 
 /**
@@ -213,7 +213,7 @@ const redisHelpers = {
   async del(key) {
     const redis = getRedisClient();
     await redis.del(key);
-  }
+  },
 };
 
 /**
@@ -225,7 +225,7 @@ const assertions = {
    */
   expectPurchaseResponse(response, expectedSuccess = true) {
     expect(response).toHaveProperty('success', expectedSuccess);
-    
+
     if (expectedSuccess) {
       expect(response).toHaveProperty('jobId');
       expect(response).toHaveProperty('status', 'processing');
@@ -249,12 +249,10 @@ const assertions = {
    * Assert stock consistency
    */
   expectStockConsistency(stock) {
-    expect(stock.total_quantity).toBe(
-      stock.available_quantity + stock.reserved_quantity
-    );
+    expect(stock.total_quantity).toBe(stock.available_quantity + stock.reserved_quantity);
     expect(stock.available_quantity).toBeGreaterThanOrEqual(0);
     expect(stock.reserved_quantity).toBeGreaterThanOrEqual(0);
-  }
+  },
 };
 
 /**
@@ -274,7 +272,7 @@ const mockHelpers = {
       expire: jest.fn(),
       hset: jest.fn(),
       flushdb: jest.fn(),
-      ping: jest.fn().mockResolvedValue('PONG')
+      ping: jest.fn().mockResolvedValue('PONG'),
     };
     return mockRedis;
   },
@@ -285,10 +283,10 @@ const mockHelpers = {
   createMockDatabase() {
     const mockDb = {
       raw: jest.fn().mockResolvedValue([]),
-      transaction: jest.fn().mockImplementation((callback) => callback(mockDb))
+      transaction: jest.fn().mockImplementation(callback => callback(mockDb)),
     };
     return mockDb;
-  }
+  },
 };
 
 module.exports = {
@@ -296,5 +294,5 @@ module.exports = {
   dbHelpers,
   redisHelpers,
   assertions,
-  mockHelpers
+  mockHelpers,
 };
