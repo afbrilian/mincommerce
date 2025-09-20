@@ -51,7 +51,7 @@ module.exports = {
     connection: {
       host: process.env.DB_HOST || 'localhost',
       port: process.env.DB_PORT || 5432,
-      database: process.env.DB_NAME + '_test' || 'mincommerce_test',
+      database: process.env.DB_NAME || 'mincommerce_test',
       user: process.env.DB_USER || 'mincommerce_user',
       password: process.env.DB_PASSWORD || 'mincommerce_password'
     },
@@ -65,6 +65,8 @@ module.exports = {
     },
     seeds: {
       directory: './src/database/seeds'
-    }
+    },
+    // Drop and recreate database for each test run
+    asyncStackTraces: true
   }
 };
