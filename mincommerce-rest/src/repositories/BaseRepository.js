@@ -2,8 +2,9 @@ const { getDatabase } = require('../config/database');
 const logger = require('../utils/logger');
 
 class BaseRepository {
-  constructor(tableName) {
+  constructor(tableName, idColumn = 'id') {
     this.tableName = tableName;
+    this.idColumn = idColumn;
   }
 
   get db() {
@@ -12,10 +13,10 @@ class BaseRepository {
 
   async findById(id) {
     try {
-      const result = await this.db(this.tableName).where('id', id).first();
+      const result = await this.db(this.tableName).where(this.idColumn, id).first();
       return result;
     } catch (error) {
-      logger.error(`Error finding ${this.tableName} by id ${id}:`, error);
+      logger.error(`Error finding ${this.tableName} by ${this.idColumn} ${id}:`, error);
       throw error;
     }
   }
@@ -32,8 +33,8 @@ class BaseRepository {
 
   async create(data) {
     try {
-      const result = await this.db(this.tableName).insert(data).returning('*').first();
-      return result;
+      const results = await this.db(this.tableName).insert(data).returning('*');
+      return results[0];
     } catch (error) {
       logger.error(`Error creating ${this.tableName}:`, error);
       throw error;
@@ -42,24 +43,23 @@ class BaseRepository {
 
   async update(id, data) {
     try {
-      const result = await this.db(this.tableName)
-        .where('id', id)
+      const results = await this.db(this.tableName)
+        .where(this.idColumn, id)
         .update(data)
-        .returning('*')
-        .first();
-      return result;
+        .returning('*');
+      return results[0];
     } catch (error) {
-      logger.error(`Error updating ${this.tableName} with id ${id}:`, error);
+      logger.error(`Error updating ${this.tableName} with ${this.idColumn} ${id}:`, error);
       throw error;
     }
   }
 
   async delete(id) {
     try {
-      const result = await this.db(this.tableName).where('id', id).del();
+      const result = await this.db(this.tableName).where(this.idColumn, id).del();
       return result;
     } catch (error) {
-      logger.error(`Error deleting ${this.tableName} with id ${id}:`, error);
+      logger.error(`Error deleting ${this.tableName} with ${this.idColumn} ${id}:`, error);
       throw error;
     }
   }

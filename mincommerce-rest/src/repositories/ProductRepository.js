@@ -29,8 +29,8 @@ class ProductRepository extends BaseRepository {
 
   async create(productData) {
     try {
-      const result = await this.db(this.tableName).insert(productData).returning('*').first();
-      return Product.fromDatabase(result);
+      const results = await this.db(this.tableName).insert(productData).returning('*');
+      return Product.fromDatabase(results[0]);
     } catch (error) {
       logger.error('Error creating product:', error);
       throw error;

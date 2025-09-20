@@ -1,16 +1,24 @@
+const { v4: uuidv4 } = require('uuid');
+
 exports.seed = async function(knex) {
   // Deletes ALL existing entries
-  await knex('purchase_attempts').del();
   await knex('orders').del();
   await knex('flash_sales').del();
   await knex('stocks').del();
   await knex('products').del();
   await knex('users').del();
 
+  // Generate dynamic UUIDs
+  const productId = uuidv4();
+  const saleId = uuidv4();
+  const userId1 = uuidv4();
+  const userId2 = uuidv4();
+  const userId3 = uuidv4();
+
   // Insert sample data
   const products = await knex('products').insert([
     {
-      product_id: '550e8400-e29b-41d4-a716-446655440000',
+      product_id: productId,
       name: 'Limited Edition Gaming Console',
       description: 'The most advanced gaming console with exclusive features and premium design.',
       price: 599.99,
@@ -29,7 +37,7 @@ exports.seed = async function(knex) {
 
   const flashSales = await knex('flash_sales').insert([
     {
-      sale_id: '650e8400-e29b-41d4-a716-446655440000',
+      sale_id: saleId,
       product_id: products[0].product_id,
       start_time: new Date(Date.now() + 60000), // 1 minute from now
       end_time: new Date(Date.now() + 7200000), // 2 hours from now
@@ -37,19 +45,20 @@ exports.seed = async function(knex) {
     }
   ]).returning('*');
 
-  // Insert some test users
+  // Insert some test users with dynamic emails
+  const timestamp = Date.now();
   const users = await knex('users').insert([
     {
-      user_id: '750e8400-e29b-41d4-a716-446655440000',
-      email: 'testuser1@example.com'
+      user_id: userId1,
+      email: `testuser1-${timestamp}@example.com`
     },
     {
-      user_id: '850e8400-e29b-41d4-a716-446655440000',
-      email: 'testuser2@example.com'
+      user_id: userId2,
+      email: `testuser2-${timestamp}@example.com`
     },
     {
-      user_id: '950e8400-e29b-41d4-a716-446655440000',
-      email: 'testuser3@example.com'
+      user_id: userId3,
+      email: `testuser3-${timestamp}@example.com`
     }
   ]).returning('*');
 

@@ -4,7 +4,7 @@ const logger = require('../utils/logger');
 
 class FlashSaleRepository extends BaseRepository {
   constructor() {
-    super('flash_sales');
+    super('flash_sales', 'sale_id');
   }
 
   async findById(saleId) {
@@ -59,8 +59,8 @@ class FlashSaleRepository extends BaseRepository {
 
   async create(saleData) {
     try {
-      const result = await this.db(this.tableName).insert(saleData).returning('*').first();
-      return FlashSale.fromDatabase(result);
+      const results = await this.db(this.tableName).insert(saleData).returning('*');
+      return FlashSale.fromDatabase(results[0]);
     } catch (error) {
       logger.error('Error creating flash sale:', error);
       throw error;
@@ -69,15 +69,14 @@ class FlashSaleRepository extends BaseRepository {
 
   async updateStatus(saleId, status) {
     try {
-      const result = await this.db(this.tableName)
+      const results = await this.db(this.tableName)
         .where('sale_id', saleId)
         .update({
           status,
           updated_at: this.db.fn.now(),
         })
-        .returning('*')
-        .first();
-      return result ? FlashSale.fromDatabase(result) : null;
+        .returning('*');
+      return results[0] ? FlashSale.fromDatabase(results[0]) : null;
     } catch (error) {
       logger.error(`Error updating flash sale status ${saleId}:`, error);
       throw error;

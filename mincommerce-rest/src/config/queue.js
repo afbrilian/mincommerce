@@ -14,23 +14,27 @@ const initializeQueue = async () => {
             host: process.env.REDIS_HOST || 'localhost',
             port: process.env.REDIS_PORT || 6379,
             password: process.env.REDIS_PASSWORD || undefined,
+            db: process.env.REDIS_DB || 0, // Use different Redis DB for tests
           },
         },
-        kafka: {
-          clientId: process.env.KAFKA_CLIENT_ID || 'mincommerce-api',
-          brokers: process.env.KAFKA_BROKERS ? process.env.KAFKA_BROKERS.split(',') : ['localhost:9092'],
-          ssl: process.env.KAFKA_SSL === 'true',
-          sasl: process.env.KAFKA_USERNAME ? {
-            mechanism: 'plain',
-            username: process.env.KAFKA_USERNAME,
-            password: process.env.KAFKA_PASSWORD,
-          } : undefined,
-        },
-        sqs: {
-          region: process.env.AWS_REGION || 'us-east-1',
-          accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-          secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-        },
+        // Only include other providers in production
+        ...(process.env.NODE_ENV !== 'test' && {
+          kafka: {
+            clientId: process.env.KAFKA_CLIENT_ID || 'mincommerce-api',
+            brokers: process.env.KAFKA_BROKERS ? process.env.KAFKA_BROKERS.split(',') : ['localhost:9092'],
+            ssl: process.env.KAFKA_SSL === 'true',
+            sasl: process.env.KAFKA_USERNAME ? {
+              mechanism: 'plain',
+              username: process.env.KAFKA_USERNAME,
+              password: process.env.KAFKA_PASSWORD,
+            } : undefined,
+          },
+          sqs: {
+            region: process.env.AWS_REGION || 'us-east-1',
+            accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+            secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+          },
+        }),
       },
     };
 

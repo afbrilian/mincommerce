@@ -56,8 +56,8 @@ class OrderRepository extends BaseRepository {
 
   async create(orderData) {
     try {
-      const result = await this.db(this.tableName).insert(orderData).returning('*').first();
-      return Order.fromDatabase(result);
+      const results = await this.db(this.tableName).insert(orderData).returning('*');
+      return Order.fromDatabase(results[0]);
     } catch (error) {
       logger.error('Error creating order:', error);
       throw error;

@@ -74,7 +74,6 @@ const dbHelpers = {
   async clearAllData() {
     const db = getDatabase();
     const tables = [
-      'purchase_attempts',
       'orders',
       'flash_sales',
       'stocks',
@@ -184,7 +183,7 @@ const redisHelpers = {
    */
   async clearAll() {
     const redis = getRedisClient();
-    await redis.flushdb();
+    await redis.flushDb();
   },
 
   /**

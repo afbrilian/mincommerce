@@ -1,5 +1,5 @@
-exports.up = function(knex) {
-  return knex.schema.createTable('orders', function(table) {
+exports.up = async function(knex) {
+  await knex.schema.createTable('orders', function(table) {
     table.uuid('order_id').primary().defaultTo(knex.raw('gen_random_uuid()'));
     table.uuid('user_id').notNullable().references('user_id').inTable('users').onDelete('CASCADE');
     table.uuid('product_id').notNullable().references('product_id').inTable('products').onDelete('CASCADE');
@@ -9,7 +9,6 @@ exports.up = function(knex) {
     
     // Constraints
     table.unique(['user_id', 'product_id']); // One item per user
-    table.check("status IN ('pending', 'confirmed', 'failed')", 'status_check');
     
     // Indexes for performance
     table.index('user_id');
@@ -18,6 +17,13 @@ exports.up = function(knex) {
     table.index('created_at');
     table.index(['user_id', 'product_id']);
   });
+  
+  // Add check constraints using raw SQL
+  await knex.raw(`
+    ALTER TABLE orders 
+    ADD CONSTRAINT status_check 
+    CHECK (status IN ('pending', 'confirmed', 'failed'))
+  `);
 };
 
 exports.down = function(knex) {

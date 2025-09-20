@@ -4,7 +4,7 @@ const logger = require('../utils/logger');
 
 class UserRepository extends BaseRepository {
   constructor() {
-    super('users');
+    super('users', 'user_id');
   }
 
   async findByEmail(email) {
@@ -29,8 +29,8 @@ class UserRepository extends BaseRepository {
 
   async create(userData) {
     try {
-      const result = await this.db(this.tableName).insert(userData).returning('*').first();
-      return User.fromDatabase(result);
+      const results = await this.db(this.tableName).insert(userData).returning('*');
+      return User.fromDatabase(results[0]);
     } catch (error) {
       logger.error('Error creating user:', error);
       throw error;

@@ -3,82 +3,65 @@
  * Global test configuration and setup
  */
 
-const { connectDatabase, closeDatabase } = require('../src/config/database');
+const { connectDatabase, closeDatabase, getDatabase } = require('../src/config/database');
 const { connectRedis, closeRedis } = require('../src/config/redis');
+const { initializeQueue, closeQueue } = require('../src/config/queue');
+const logger = require('../src/utils/logger');
+const { dbHelpers, redisHelpers } = require('./utils/testHelpers'); // Import test helpers
 
-// Set test environment
+// Set environment to test
 process.env.NODE_ENV = 'test';
-process.env.DB_NAME = process.env.DB_NAME + '_test' || 'mincommerce_test';
-process.env.REDIS_DB = 1; // Use different Redis DB for tests
 
-// Global test timeout
-jest.setTimeout(30000);
-
-// Global setup - runs once before all tests
+// Global setup
 beforeAll(async () => {
+  logger.info('Global test setup: Connecting to services...');
   try {
-    console.log('Setting up test environment...');
-    
-    // Connect to test database
     await connectDatabase();
-    console.log('Test database connected');
-    
-    // Connect to test Redis
     await connectRedis();
-    console.log('Test Redis connected');
-    
-    // Run migrations for test database
-    const knex = require('../src/config/database').getDatabase();
-    await knex.migrate.latest();
-    console.log('Test database migrations completed');
-    
-    // Seed test data
-    await knex.seed.run();
-    console.log('Test data seeded');
-    
+    await initializeQueue();
+
+    // Run migrations
+    const db = getDatabase();
+    await db.migrate.latest();
+    logger.info('Database migrations ran successfully.');
+
+    // Run seeds
+    await db.seed.run();
+    logger.info('Database seeded successfully.');
+
   } catch (error) {
-    console.error('Test setup failed:', error);
-    throw error;
+    logger.error('Global test setup failed:', error);
+    process.exit(1);
   }
 });
 
-// Global teardown - runs once after all tests
+// Global teardown
 afterAll(async () => {
+  logger.info('Global test teardown: Closing services...');
   try {
-    console.log('Cleaning up test environment...');
-    
-    // Close database connection
-    await closeDatabase();
-    console.log('Test database disconnected');
-    
-    // Close Redis connection
+    const db = getDatabase();
+    // Rollback migrations after all tests are done
+    await db.migrate.rollback();
+    logger.info('Database migrations rolled back successfully.');
+
+    await closeQueue();
     await closeRedis();
-    console.log('Test Redis disconnected');
-    
+    await closeDatabase();
   } catch (error) {
-    console.error('Test teardown failed:', error);
+    logger.error('Global test teardown failed:', error);
+    process.exit(1);
   }
 });
 
-// Clean up between tests
+// Clear Redis and reset database for each test file
 beforeEach(async () => {
-  // Clear Redis test database
-  const { getRedisClient } = require('../src/config/redis');
-  try {
-    const redis = getRedisClient();
-    await redis.flushdb();
-  } catch (error) {
-    // Ignore Redis errors during cleanup
-  }
-});
+  // Clear Redis data
+  await redisHelpers.clearAll();
 
-// Mock console methods in test environment
-global.console = {
-  ...console,
-  // Uncomment to suppress console output during tests
-  // log: jest.fn(),
-  // debug: jest.fn(),
-  // info: jest.fn(),
-  // warn: jest.fn(),
-  // error: jest.fn(),
-};
+  // Clear database data (except migrations table)
+  await dbHelpers.clearAllData();
+
+  // Re-seed data for each test to ensure isolation
+  const db = getDatabase();
+  await db.seed.run();
+});

@@ -62,7 +62,7 @@ class FlashSaleService {
       };
 
       // Cache for 30 seconds
-      await redis.setex(cacheKey, 30, JSON.stringify(saleStatus));
+      await redis.setEx(cacheKey, 30, JSON.stringify(saleStatus));
 
       return saleStatus;
     } catch (error) {

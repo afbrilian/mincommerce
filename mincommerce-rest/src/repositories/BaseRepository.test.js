@@ -9,7 +9,7 @@ const { generateTestData, dbHelpers, redisHelpers } = require('../../tests/utils
 // Create a test repository class that extends BaseRepository
 class TestRepository extends BaseRepository {
   constructor() {
-    super('test_table');
+    super('users', 'user_id');
   }
 }
 
@@ -23,9 +23,6 @@ describe('BaseRepository - Generic CRUD Operations', () => {
 
     // Initialize repository
     testRepository = new TestRepository();
-
-    // Create test table (simulate with users table for testing)
-    testRepository.tableName = 'users';
   });
 
   describe('Basic CRUD Operations', () => {

@@ -19,8 +19,8 @@ class StockRepository extends BaseRepository {
 
   async create(stockData) {
     try {
-      const result = await this.db(this.tableName).insert(stockData).returning('*').first();
-      return Stock.fromDatabase(result);
+      const results = await this.db(this.tableName).insert(stockData).returning('*');
+      return Stock.fromDatabase(results[0]);
     } catch (error) {
       logger.error('Error creating stock:', error);
       throw error;

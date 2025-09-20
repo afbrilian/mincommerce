@@ -12,7 +12,8 @@ describe('Logger Utility', () => {
     logger.clear();
     
     // Add console transport for testing
-    logger.add(new logger.transports.Console({
+    const winston = require('winston');
+    logger.add(new winston.transports.Console({
       silent: true // Suppress output during tests
     }));
   });
