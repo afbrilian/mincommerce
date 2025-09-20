@@ -156,6 +156,114 @@ Tests include:
 - **Error Tracking** - Comprehensive error handling
 - **Performance Metrics** - Built-in monitoring
 
+## 🏗️ Architectural Decisions
+
+### Why We Didn't Implement Event-Driven Architecture & CQRS
+
+#### **Event-Driven Architecture**
+
+**Why we didn't implement it:**
+
+**Complexity vs. Requirements:**
+- **Flash Sale is a simple domain** - Single product, limited time window
+- **Event-driven adds complexity** without clear benefits for this use case
+- **Our current architecture already handles the core requirements** efficiently
+
+**When Event-Driven Makes Sense:**
+```javascript
+// Event-driven would be beneficial for:
+✅ Multiple microservices communicating
+✅ Complex business workflows
+✅ Audit trails and event sourcing
+✅ Real-time analytics across services
+```
+
+**Our Current Approach is Better Because:**
+- **Direct database operations** are faster for inventory management
+- **PostgreSQL advisory locks** provide ACID guarantees
+- **Simpler debugging** and monitoring
+- **Lower latency** for purchase operations
+
+#### **CQRS (Command Query Responsibility Segregation)**
+
+**Why we didn't implement CQRS:**
+
+**Single Database is Sufficient:**
+- **Flash sale has simple read/write patterns**
+- **No complex query requirements** that need separate read models
+- **PostgreSQL handles both reads and writes efficiently**
+
+**CQRS Adds Complexity:**
+```javascript
+// CQRS would require:
+❌ Separate read/write databases
+❌ Event sourcing infrastructure
+❌ Event handlers and projections
+❌ Complex data synchronization
+```
+
+**Our Repository Pattern is Better Because:**
+- **Single source of truth** - easier to maintain
+- **ACID transactions** - data consistency guaranteed
+- **Simpler testing** - no event synchronization issues
+- **Better performance** - no event processing overhead
+
+#### **NestJS vs Express.js**
+
+**Why We Chose Express.js:**
+
+**1. Simplicity & Learning Curve:**
+- **Easier to understand** for the demo
+- **Less opinionated** - more flexibility
+- **Familiar to most developers**
+
+**2. Performance:**
+- **Lower overhead** - no framework abstraction
+- **Direct control** over request handling
+- **Better for high-throughput scenarios**
+
+**3. Migration Path:**
+- **Easy to migrate to NestJS later** with our current architecture
+- **Repository pattern** translates well to NestJS services
+- **Clean separation** makes framework migration straightforward
+
+**When to Use Each Pattern:**
+
+**Event-Driven Architecture:**
+```javascript
+// Use when:
+✅ Multiple microservices
+✅ Complex business workflows
+✅ Need audit trails
+✅ Real-time analytics
+✅ Integration with external systems
+
+// Our flash sale: ❌ Single service, simple workflow
+```
+
+**CQRS Pattern:**
+```javascript
+// Use when:
+✅ Complex read/write patterns
+✅ Different scaling needs for reads vs writes
+✅ Need event sourcing
+✅ Complex reporting requirements
+
+// Our flash sale: ❌ Simple read/write, single database sufficient
+```
+
+**NestJS Framework:**
+```typescript
+// Use when:
+✅ Building microservices
+✅ Need dependency injection
+✅ Want built-in validation
+✅ Planning event-driven architecture
+✅ Team familiar with Angular patterns
+
+// Our case: ⚖️ Express.js is simpler for demo, but NestJS would be better for production
+```
+
 ## 🔄 Production Deployment
 
 The system is designed for easy migration to cloud infrastructure:

@@ -43,6 +43,7 @@ if (cluster.isMaster) {
   const flashSaleRoutes = require('./routes/flashSale');
   const purchaseRoutes = require('./routes/purchase');
   const healthRoutes = require('./routes/health');
+  const queueRoutes = require('./routes/queue');
 
   const app = express();
   const server = createServer(app);
@@ -87,6 +88,7 @@ if (cluster.isMaster) {
   app.use('/api/health', healthRoutes);
   app.use('/api/flash-sale', flashSaleRoutes);
   app.use('/api/purchase', purchaseRoutes);
+  app.use('/api/queue', queueRoutes);
 
   // WebSocket connection handling
   io.on('connection', (socket) => {

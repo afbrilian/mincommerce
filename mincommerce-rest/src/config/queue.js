@@ -1,82 +1,102 @@
-const Queue = require('bull');
+const QueueFactory = require('../queue/QueueFactory');
 const logger = require('../utils/logger');
 
-let purchaseQueue = null;
+let queueFactory = null;
 
 const initializeQueue = async () => {
   try {
-    const redisConfig = {
-      host: process.env.REDIS_HOST || 'localhost',
-      port: process.env.REDIS_PORT || 6379,
-      password: process.env.REDIS_PASSWORD || undefined,
-    };
-
-    // Create purchase queue
-    purchaseQueue = new Queue('purchase processing', {
-      redis: redisConfig,
-      defaultJobOptions: {
-        removeOnComplete: 100, // Keep last 100 completed jobs
-        removeOnFail: 50, // Keep last 50 failed jobs
-        attempts: 3,
-        backoff: {
-          type: 'exponential',
-          delay: 2000,
+    // Queue configuration
+    const queueConfig = {
+      default: process.env.QUEUE_PROVIDER || 'bull',
+      providers: {
+        bull: {
+          redis: {
+            host: process.env.REDIS_HOST || 'localhost',
+            port: process.env.REDIS_PORT || 6379,
+            password: process.env.REDIS_PASSWORD || undefined,
+          },
+        },
+        kafka: {
+          clientId: process.env.KAFKA_CLIENT_ID || 'mincommerce-api',
+          brokers: process.env.KAFKA_BROKERS ? process.env.KAFKA_BROKERS.split(',') : ['localhost:9092'],
+          ssl: process.env.KAFKA_SSL === 'true',
+          sasl: process.env.KAFKA_USERNAME ? {
+            mechanism: 'plain',
+            username: process.env.KAFKA_USERNAME,
+            password: process.env.KAFKA_PASSWORD,
+          } : undefined,
+        },
+        sqs: {
+          region: process.env.AWS_REGION || 'us-east-1',
+          accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+          secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
         },
       },
-    });
+    };
 
-    // Queue event handlers
-    purchaseQueue.on('completed', (job, result) => {
-      logger.info(`Purchase job ${job.id} completed:`, result);
-    });
+    // Initialize queue factory
+    queueFactory = new QueueFactory();
+    await queueFactory.initializeProviders(queueConfig);
 
-    purchaseQueue.on('failed', (job, error) => {
-      logger.error(`Purchase job ${job.id} failed:`, error.message);
-    });
+    // Register job processors
+    queueFactory.process('purchase-processing', require('../jobs/processPurchase'));
 
-    purchaseQueue.on('stalled', job => {
-      logger.warn(`Purchase job ${job.id} stalled`);
-    });
+    logger.info(`Queue system initialized with provider: ${queueConfig.default}`);
+    return queueFactory;
 
-    // Process jobs
-    purchaseQueue.process('process-purchase', require('../jobs/processPurchase'));
-
-    logger.info('Purchase queue initialized');
-    return purchaseQueue;
   } catch (error) {
     logger.error('Queue initialization failed:', error);
     throw error;
   }
 };
 
-const getPurchaseQueue = () => {
-  if (!purchaseQueue) {
-    throw new Error('Purchase queue not initialized. Call initializeQueue() first.');
+const getQueueFactory = () => {
+  if (!queueFactory) {
+    throw new Error('Queue factory not initialized. Call initializeQueue() first.');
   }
-  return purchaseQueue;
+  return queueFactory;
 };
 
-const addPurchaseJob = async purchaseData => {
-  const queue = getPurchaseQueue();
-  const job = await queue.add('process-purchase', purchaseData, {
+const addPurchaseJob = async (purchaseData) => {
+  const factory = getQueueFactory();
+  const job = await factory.addJob('purchase-processing', purchaseData, {
     priority: 1, // Higher priority for purchase jobs
     delay: 0, // Process immediately
   });
-
-  logger.info(`Purchase job added: ${job.id}`);
+  
+  logger.info(`Purchase job added: ${job.id} via ${job.provider}`);
   return job;
 };
 
+const getJob = async (jobId) => {
+  const factory = getQueueFactory();
+  return factory.getJob(jobId);
+};
+
+const getJobStatus = async (jobId) => {
+  const factory = getQueueFactory();
+  return factory.getJobStatus(jobId);
+};
+
+const getQueueStats = async () => {
+  const factory = getQueueFactory();
+  return factory.getStats();
+};
+
 const closeQueue = async () => {
-  if (purchaseQueue) {
-    await purchaseQueue.close();
-    logger.info('Purchase queue closed');
+  if (queueFactory) {
+    await queueFactory.close();
+    queueFactory = null;
+    logger.info('Queue system closed');
   }
 };
 
 module.exports = {
   initializeQueue,
-  getPurchaseQueue,
+  getQueueFactory,
   addPurchaseJob,
+  getJob,
+  getJobStatus,
+  getQueueStats,
   closeQueue,
 };
