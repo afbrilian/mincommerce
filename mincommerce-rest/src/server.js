@@ -33,7 +33,23 @@ const PORT = process.env.PORT || 3001
 const workerManager = new WorkerManager()
 
 // Security middleware
-app.use(helmet())
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+        scriptSrc: ["'self'"],
+        connectSrc: ["'self'", 'http://localhost:3001', 'ws://localhost:3001'],
+        imgSrc: ["'self'", 'data:', 'https:'],
+        fontSrc: ["'self'", 'https:', 'data:'],
+        objectSrc: ["'none'"],
+        mediaSrc: ["'self'"],
+        frameSrc: ["'none'"]
+      }
+    }
+  })
+)
 app.use(
   cors({
     origin: process.env.FRONTEND_URL || 'http://localhost:3000',
@@ -69,6 +85,10 @@ app.use((req, res, next) => {
 app.use('/health', healthRoutes)
 
 // Swagger API documentation
+app.get('/api-docs/swagger.json', (req, res) => {
+  res.setHeader('Content-Type', 'application/json')
+  res.send(specs)
+})
 app.use('/api-docs', serve, setup)
 
 // API routes
@@ -126,7 +146,7 @@ if (process.env.NODE_ENV !== 'test') {
 
       // Start worker manager
       await workerManager.start()
-      
+
       // Set worker manager in queue routes
       setWorkerManager(workerManager)
 

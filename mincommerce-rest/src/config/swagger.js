@@ -7,7 +7,8 @@ const options = {
     info: {
       title: 'MinCommerce Flash Sale API',
       version: '1.0.0',
-      description: 'A high-throughput flash sale system built with Node.js, Express, PostgreSQL, and Redis',
+      description:
+        'A high-throughput flash sale system built with Node.js, Express, PostgreSQL, and Redis',
       contact: {
         name: 'MinCommerce Team',
         email: 'admin@brilian.af'
@@ -19,7 +20,7 @@ const options = {
     },
     servers: [
       {
-        url: 'http://localhost:3000',
+        url: 'http://localhost:3001',
         description: 'Development server'
       },
       {
@@ -453,10 +454,7 @@ const options = {
       }
     ]
   },
-  apis: [
-    './src/routes/*.js',
-    './src/routes/**/*.js'
-  ]
+  apis: ['./src/routes/*.js', './src/routes/**/*.js']
 }
 
 const specs = swaggerJSDoc(options)
@@ -468,6 +466,14 @@ module.exports = {
   setup: swaggerUi.setup(specs, {
     explorer: true,
     customCss: '.swagger-ui .topbar { display: none }',
-    customSiteTitle: 'MinCommerce Flash Sale API'
+    customSiteTitle: 'MinCommerce Flash Sale API',
+    swaggerOptions: {
+      url: '/api-docs/swagger.json',
+      tryItOutEnabled: true,
+      requestInterceptor: req => {
+        // Allow requests to localhost:3001
+        return req
+      }
+    }
   })
 }
