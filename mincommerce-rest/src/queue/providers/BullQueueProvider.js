@@ -58,7 +58,7 @@ class BullQueueProvider extends QueueInterface {
       throw new Error(`Queue ${type} not found`);
     }
 
-    const job = await queue.add('process', data, {
+    const job = await queue.add(type, data, {
       priority: options.priority || 1,
       delay: options.delay || 0,
       ...options,
@@ -80,7 +80,7 @@ class BullQueueProvider extends QueueInterface {
       throw new Error(`Queue ${type} not found`);
     }
 
-    queue.process(concurrency, processor);
+    queue.process(type, concurrency, processor);
     logger.info(`Bull processor registered for queue ${type} with concurrency ${concurrency}`);
   }
 

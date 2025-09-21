@@ -22,6 +22,11 @@
     "format": "prettier --write src/**/*.js",
     "format:check": "prettier --check src/**/*.js",
     "fix": "npm run lint:fix",
+    "queue:clear": "node scripts/queue-manager.js clear",
+    "queue:stats": "node scripts/queue-manager.js stats",
+    "queue:keys": "node scripts/queue-manager.js keys",
+    "queue:reset": "node scripts/queue-manager.js reset",
+    "queue:help": "node scripts/queue-manager.js help",
     "docker:build": "docker build -t mincommerce-api .",
     "docker:run": "docker run -p 3001:3001 mincommerce-api"
   },
