@@ -3,17 +3,17 @@
  * Handles JWT-based authentication for admin and user login
  */
 
-const jwt = require('jsonwebtoken');
-const UserRepository = require('../repositories/UserRepository');
-const { getRedisClient } = require('../config/redis');
-const logger = require('../utils/logger');
-const CONSTANTS = require('../constants');
+const jwt = require('jsonwebtoken')
+const UserRepository = require('../repositories/UserRepository')
+const { getRedisClient } = require('../config/redis')
+const logger = require('../utils/logger')
+const CONSTANTS = require('../constants')
 
 class AuthService {
   constructor() {
-    this.userRepository = new UserRepository();
-    this.jwtSecret = process.env.JWT_SECRET || 'mincommerce-secret-key-change-in-production';
-    this.jwtExpiry = process.env.JWT_EXPIRY || '24h';
+    this.userRepository = new UserRepository()
+    this.jwtSecret = process.env.JWT_SECRET || 'mincommerce-secret-key-change-in-production'
+    this.jwtExpiry = process.env.JWT_EXPIRY || '24h'
   }
 
   /**
@@ -23,14 +23,14 @@ class AuthService {
    */
   async authenticateAdmin(email) {
     try {
-      logger.info(`Admin authentication attempt for email: ${email}`);
+      logger.info(`Admin authentication attempt for email: ${email}`)
 
       // Find admin user in database
-      const adminUser = await this.userRepository.findByEmail(email);
-      
+      const adminUser = await this.userRepository.findByEmail(email)
+
       if (!adminUser || !adminUser.isAdmin()) {
-        logger.warn(`Admin authentication failed for email: ${email}`);
-        throw new Error('Invalid admin credentials');
+        logger.warn(`Admin authentication failed for email: ${email}`)
+        throw new Error('Invalid admin credentials')
       }
 
       // Generate JWT token
@@ -39,29 +39,28 @@ class AuthService {
         email: adminUser.email,
         userType: 'admin',
         role: adminUser.role,
-        nonce: Math.random().toString(36).substring(7), // Add random nonce for uniqueness
-      });
+        nonce: Math.random().toString(36).substring(7) // Add random nonce for uniqueness
+      })
 
-      logger.info(`Admin authentication successful for email: ${email}`);
-      
+      logger.info(`Admin authentication successful for email: ${email}`)
+
       return {
         success: true,
         token,
         userType: 'admin',
         email: adminUser.email,
         userId: adminUser.userId
-      };
-
+      }
     } catch (error) {
-      logger.error(`Admin authentication error for email ${email}:`, error);
-      
+      logger.error(`Admin authentication error for email ${email}:`, error)
+
       // Re-throw authentication errors
       if (error.message === 'Invalid admin credentials') {
-        throw error;
+        throw error
       }
-      
+
       // Wrap other errors
-      throw new Error('Authentication service unavailable');
+      throw new Error('Authentication service unavailable')
     }
   }
 
@@ -73,23 +72,23 @@ class AuthService {
    */
   async authenticateUser(email) {
     try {
-      logger.info(`User authentication attempt for email: ${email}`);
+      logger.info(`User authentication attempt for email: ${email}`)
 
       // Validate email format
       if (!this.isValidEmail(email)) {
-        throw new Error('Invalid email format');
+        throw new Error('Invalid email format')
       }
 
       // Find or create user
-      let user = await this.userRepository.findByEmail(email);
-      
+      let user = await this.userRepository.findByEmail(email)
+
       if (!user) {
         // Create new user (simplified - no password for test requirements)
         user = await this.userRepository.create({
           email,
           role: 'user'
-        });
-        logger.info(`New user created for email: ${email}`);
+        })
+        logger.info(`New user created for email: ${email}`)
       }
 
       // Generate JWT token
@@ -98,29 +97,28 @@ class AuthService {
         email: user.email,
         userType: 'user',
         role: user.role,
-        nonce: Math.random().toString(36).substring(7), // Add random nonce for uniqueness
-      });
+        nonce: Math.random().toString(36).substring(7) // Add random nonce for uniqueness
+      })
 
-      logger.info(`User authentication successful for email: ${email}`);
-      
+      logger.info(`User authentication successful for email: ${email}`)
+
       return {
         success: true,
         token,
         userType: 'user',
         email: user.email,
         userId: user.userId
-      };
-
+      }
     } catch (error) {
-      logger.error(`User authentication error for email ${email}:`, error);
-      
+      logger.error(`User authentication error for email ${email}:`, error)
+
       // Re-throw validation errors
       if (error.message === 'Invalid email format') {
-        throw error;
+        throw error
       }
-      
+
       // Wrap other errors
-      throw new Error('Authentication service unavailable');
+      throw new Error('Authentication service unavailable')
     }
   }
 
@@ -136,12 +134,12 @@ class AuthService {
         expiresIn: customExpiry || this.jwtExpiry,
         issuer: 'mincommerce-api',
         audience: 'mincommerce-client'
-      };
+      }
 
-      return jwt.sign(payload, this.jwtSecret, options);
+      return jwt.sign(payload, this.jwtSecret, options)
     } catch (error) {
-      logger.error('Token generation error:', error);
-      throw new Error('Token generation failed');
+      logger.error('Token generation error:', error)
+      throw new Error('Token generation failed')
     }
   }
 
@@ -153,34 +151,34 @@ class AuthService {
   verifyToken(token) {
     try {
       if (!token) {
-        throw new Error('Invalid token');
+        throw new Error('Invalid token')
       }
 
       // Verify token structure
-      const parts = token.split('.');
+      const parts = token.split('.')
       if (parts.length !== 3) {
-        throw new Error('Invalid token');
+        throw new Error('Invalid token')
       }
 
       const decoded = jwt.verify(token, this.jwtSecret, {
         issuer: 'mincommerce-api',
         audience: 'mincommerce-client'
-      });
+      })
 
       return {
         valid: true,
         ...decoded
-      };
-
+      }
     } catch (error) {
-      logger.warn('Token verification failed:', error.message);
-      
-      if (error.name === 'TokenExpiredError') {
-        throw new Error('Token expired');
-      } else if (error.name === 'JsonWebTokenError') {
-        throw new Error('Invalid token');
+      logger.warn('Token verification failed:', error.message)
+
+      // Re-throw JWT-specific errors as-is to preserve error names
+      if (error.name === 'TokenExpiredError' || error.name === 'JsonWebTokenError') {
+        throw error
       } else {
-        throw new Error('Invalid token');
+        const jwtError = new Error('Invalid token')
+        jwtError.name = 'JsonWebTokenError'
+        throw jwtError
       }
     }
   }
@@ -191,8 +189,7 @@ class AuthService {
    * @returns {boolean} True if valid email format
    */
   isValidEmail(email) {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email);
+    return CONSTANTS.VALIDATION.EMAIL_REGEX.test(email)
   }
 
   /**
@@ -202,15 +199,15 @@ class AuthService {
    */
   extractTokenFromHeader(authHeader) {
     if (!authHeader) {
-      return null;
+      return null
     }
 
-    const parts = authHeader.split(' ');
+    const parts = authHeader.split(' ')
     if (parts.length !== 2 || parts[0] !== 'Bearer') {
-      return null;
+      return null
     }
 
-    return parts[1];
+    return parts[1]
   }
 
   /**
@@ -221,28 +218,27 @@ class AuthService {
    */
   authenticateMiddleware(req, res, next) {
     try {
-      const authHeader = req.headers.authorization;
-      const token = this.extractTokenFromHeader(authHeader);
+      const authHeader = req.headers.authorization
+      const token = this.extractTokenFromHeader(authHeader)
 
       if (!token) {
         return res.status(401).json({
           success: false,
           error: 'Authentication required'
-        });
+        })
       }
 
-      const decoded = this.verifyToken(token);
-      req.user = decoded;
-      
-      next();
+      const decoded = this.verifyToken(token)
+      req.user = decoded
 
+      next()
     } catch (error) {
-      logger.warn('Authentication middleware error:', error.message);
-      
+      logger.warn('Authentication middleware error:', error.message)
+
       return res.status(401).json({
         success: false,
         error: 'Invalid or expired token'
-      });
+      })
     }
   }
 
@@ -258,27 +254,26 @@ class AuthService {
         return res.status(401).json({
           success: false,
           error: 'Authentication required'
-        });
+        })
       }
 
       if (req.user.userType !== 'admin' || req.user.role !== 'admin') {
         return res.status(403).json({
           success: false,
           error: 'Admin access required'
-        });
+        })
       }
 
-      next();
-
+      next()
     } catch (error) {
-      logger.error('Admin middleware error:', error);
-      
+      logger.error('Admin middleware error:', error)
+
       return res.status(500).json({
         success: false,
         error: 'Authorization check failed'
-      });
+      })
     }
   }
 }
 
-module.exports = AuthService;
+module.exports = AuthService

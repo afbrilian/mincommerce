@@ -100,6 +100,14 @@ const dbHelpers = {
   },
 
   /**
+   * Get all users
+   */
+  async getUsers() {
+    const db = getDatabase();
+    return await db('users').select('*');
+  },
+
+  /**
    * Create test product
    */
   async createProduct(productData = {}) {

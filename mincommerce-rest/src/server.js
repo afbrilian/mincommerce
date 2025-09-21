@@ -14,6 +14,7 @@ const notFound = require('./middleware/notFound');
 
 // Import routes
 const healthRoutes = require('./routes/health');
+const authRoutes = require('./routes/auth');
 const flashSaleRoutes = require('./routes/flashSale');
 const purchaseRoutes = require('./routes/purchase');
 const queueRoutes = require('./routes/queue');
@@ -64,6 +65,7 @@ app.use((req, res, next) => {
 app.use('/health', healthRoutes);
 
 // API routes
+app.use('/auth', authRoutes);
 app.use('/admin', require('./routes/admin'));
 app.use('/flash-sale', flashSaleRoutes);
 app.use('/purchase', purchaseRoutes);
