@@ -6,7 +6,7 @@ test.describe('Login Flow', () => {
   })
 
   test('should display login page', async ({ page }) => {
-    await expect(page.locator('h1')).toContainText('Login')
+    await expect(page.locator('h2')).toContainText('Welcome back')
     await expect(page.locator('input[placeholder="Enter your email address"]')).toBeVisible()
     await expect(page.locator('button[type="submit"]')).toBeVisible()
   })
@@ -91,7 +91,7 @@ test.describe('Login Flow', () => {
     
     // Should redirect to flash sale page
     await expect(page).toHaveURL('/flash-sale')
-    await expect(page.locator('h1')).toContainText('Flash Sale')
+    await expect(page.locator('h1:has-text("Flash Sale")')).toBeVisible()
     await expect(page.locator('[data-testid="flash-sale-interface"]')).toBeVisible()
   })
 
@@ -137,6 +137,6 @@ test.describe('Login Flow', () => {
     
     // Should redirect to flash sale page (auto-registered as user)
     await expect(page).toHaveURL('/flash-sale')
-    await expect(page.locator('h1')).toContainText('Flash Sale')
+    await expect(page.locator('h1:has-text("Flash Sale")')).toBeVisible()
   })
 })
