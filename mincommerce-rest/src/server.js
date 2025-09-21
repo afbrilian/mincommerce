@@ -1,59 +1,57 @@
-require('dotenv').config();
+/**
+ * Express Server Setup
+ * Main server file for the MinCommerce REST API
+ */
 
-// Cloud-native single process server
-// Let container orchestration (AWS ECS, Kubernetes) handle scaling
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
-const compression = require('compression');
 const rateLimit = require('express-rate-limit');
-const { createServer } = require('http');
-const { Server } = require('socket.io');
 
-const logger = require('./utils/logger');
-const { connectDatabase } = require('./config/database');
-const { connectRedis } = require('./config/redis');
-const { initializeQueue } = require('./config/queue');
+// Import middleware
 const errorHandler = require('./middleware/errorHandler');
 const notFound = require('./middleware/notFound');
 
 // Import routes
+const healthRoutes = require('./routes/health');
 const flashSaleRoutes = require('./routes/flashSale');
 const purchaseRoutes = require('./routes/purchase');
-const healthRoutes = require('./routes/health');
 const queueRoutes = require('./routes/queue');
 
-const app = express();
-const server = createServer(app);
-const io = new Server(server, {
-  cors: {
-    origin: process.env.NODE_ENV === 'production' ? false : '*',
-    methods: ['GET', 'POST'],
-  },
-});
+// Import configuration
+const logger = require('./utils/logger');
+const { connectDatabase } = require('./config/database');
+const { connectRedis } = require('./config/redis');
+const { initializeQueue } = require('./config/queue');
 
+const app = express();
 const PORT = process.env.PORT || 3001;
 
 // Security middleware
 app.use(helmet());
-app.use(cors());
-app.use(compression());
+app.use(
+  cors({
+    origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+    credentials: true,
+  })
+);
 
 // Rate limiting
 const limiter = rateLimit({
-  windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000, // 15 minutes
-  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 100, // limit each IP to 100 requests per windowMs
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // limit each IP to 100 requests per windowMs
   message: {
+    success: false,
     error: 'Too many requests from this IP, please try again later.',
   },
 });
-app.use('/api/', limiter);
+app.use(limiter);
 
 // Body parsing middleware
 app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Request logging
+// Logging middleware
 app.use((req, res, next) => {
   logger.info(`${req.method} ${req.path}`, {
     ip: req.ip,
@@ -62,75 +60,70 @@ app.use((req, res, next) => {
   next();
 });
 
-// Routes
-app.use('/api/health', healthRoutes);
-app.use('/api/flash-sale', flashSaleRoutes);
-app.use('/api/purchase', purchaseRoutes);
-app.use('/api/queue', queueRoutes);
+// Health check route (no auth required)
+app.use('/health', healthRoutes);
 
-// WebSocket connection handling
-io.on('connection', socket => {
-  logger.info(`Client connected: ${socket.id}`);
+// API routes
+app.use('/admin', require('./routes/admin'));
+app.use('/flash-sale', flashSaleRoutes);
+app.use('/purchase', purchaseRoutes);
+app.use('/queue', queueRoutes);
 
-  socket.on('join-sale-room', saleId => {
-    socket.join(`sale-${saleId}`);
-    logger.info(`Client ${socket.id} joined sale room: sale-${saleId}`);
-  });
-
-  socket.on('disconnect', () => {
-    logger.info(`Client disconnected: ${socket.id}`);
-  });
-});
-
-// Make io available to routes
-app.set('io', io);
-
-// Error handling middleware
+// 404 handler
 app.use(notFound);
+
+// Error handler (must be last)
 app.use(errorHandler);
 
-// Initialize services
-async function startServer() {
+// Graceful shutdown
+const gracefulShutdown = async signal => {
+  logger.info(`Received ${signal}, shutting down gracefully...`);
+
   try {
-    // Connect to database
-    await connectDatabase();
-    logger.info('Database connected successfully');
+    // Close database connection
+    const { closeDatabase } = require('./config/database');
+    await closeDatabase();
 
-    // Connect to Redis
-    await connectRedis();
-    logger.info('Redis connected successfully');
+    // Close Redis connection
+    const { closeRedis } = require('./config/redis');
+    await closeRedis();
 
-    // Initialize queue
-    await initializeQueue();
-    logger.info('Queue initialized successfully');
+    // Close queue connections
+    const { closeQueue } = require('./config/queue');
+    await closeQueue();
 
-    // Start server
-    server.listen(PORT, () => {
-      logger.info(`Server ${process.pid} listening on port ${PORT}`);
-      logger.info(`Environment: ${process.env.NODE_ENV}`);
-      logger.info('Cloud-native single process - scaling handled by container orchestration');
-    });
+    logger.info('All connections closed successfully');
+    process.exit(0);
   } catch (error) {
-    logger.error('Failed to start server:', error);
+    logger.error('Error during graceful shutdown:', error);
     process.exit(1);
   }
+};
+
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+
+// Start server only if not in test environment
+if (process.env.NODE_ENV !== 'test') {
+  const startServer = async () => {
+    try {
+      // Connect to services
+      await connectDatabase();
+      await connectRedis();
+      await initializeQueue();
+
+      app.listen(PORT, () => {
+        logger.info(`Server ${process.pid} listening on port ${PORT}`);
+        logger.info(`Environment: ${process.env.NODE_ENV || 'development'}`);
+        logger.info('Cloud-native single process - scaling handled by container orchestration');
+      });
+    } catch (error) {
+      logger.error('Failed to start server:', error);
+      process.exit(1);
+    }
+  };
+
+  startServer();
 }
 
-// Graceful shutdown
-process.on('SIGTERM', () => {
-  logger.info(`Server ${process.pid} received SIGTERM`);
-  server.close(() => {
-    logger.info(`Server ${process.pid} closed gracefully`);
-    process.exit(0);
-  });
-});
-
-process.on('SIGINT', () => {
-  logger.info(`Server ${process.pid} received SIGINT`);
-  server.close(() => {
-    logger.info(`Server ${process.pid} closed gracefully`);
-    process.exit(0);
-  });
-});
-
-startServer();
+module.exports = app;

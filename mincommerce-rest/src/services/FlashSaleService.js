@@ -83,13 +83,23 @@ class FlashSaleService {
       }
 
       // Check if product exists and has stock
-      const stock = await this.stockRepository.findByProductId(saleData.productId);
-      if (!stock) {
-        throw new Error('Product not found or has no stock');
+      try {
+        const stock = await this.stockRepository.findByProductId(saleData.productId);
+        if (!stock) {
+          throw new Error('Product not found or has no stock');
+        }
+      } catch (error) {
+        if (error.code === '22P02') {
+          // Invalid UUID format
+          throw new Error('Product not found');
+        }
+        throw error;
       }
 
       const flashSale = await this.flashSaleRepository.create({
-        ...saleData,
+        product_id: saleData.productId,
+        start_time: saleData.startTime,
+        end_time: saleData.endTime,
         status: 'upcoming',
       });
 
@@ -161,10 +171,11 @@ class FlashSaleService {
         status: sale.status,
         totalOrders: orderStats.total || 0,
         confirmedOrders: orderStats.confirmed || 0,
+        pendingOrders: orderStats.pending || 0,
         failedOrders: orderStats.failed || 0,
         totalQuantity: stock?.totalQuantity || 0,
-        availableQuantity: stock?.availableQuantity || 0,
-        soldQuantity: stock ? stock.totalQuantity - stock.availableQuantity : 0,
+        availableQuantity: stock ? stock.availableQuantity - (orderStats.confirmed || 0) : 0,
+        soldQuantity: orderStats.confirmed || 0,
         conversionRate:
           orderStats.total > 0 ? ((orderStats.confirmed / orderStats.total) * 100).toFixed(2) : 0,
       };
@@ -192,14 +203,97 @@ class FlashSaleService {
         .count('* as count')
         .groupBy('status');
 
-      return results.reduce((stats, row) => {
-        stats[row.status] = parseInt(row.count);
-        return stats;
+      const stats = results.reduce((acc, row) => {
+        acc[row.status] = parseInt(row.count);
+        return acc;
       }, {});
+
+      // Calculate total orders
+      stats.total = Object.values(stats).reduce((sum, count) => sum + count, 0);
+
+      return stats;
     } catch (error) {
       logger.error(`Error getting order statistics for sale ${saleId}:`, error);
       throw error;
     }
+  }
+
+  /**
+   * Update an existing flash sale
+   * @param {string} saleId - The sale ID to update
+   * @param {Object} updateData - Data to update
+   * @returns {Object} Updated flash sale
+   */
+  async updateFlashSale(saleId, updateData) {
+    try {
+      const existingSale = await this.flashSaleRepository.findById(saleId);
+      if (!existingSale) {
+        throw new Error('Flash sale not found');
+      }
+
+      // Validate product exists and has stock
+      if (updateData.productId) {
+        try {
+          const stock = await this.stockRepository.findByProductId(updateData.productId);
+          if (!stock) {
+            throw new Error('Stock entry not found for product');
+          }
+        } catch (error) {
+          if (error.code === '22P02') {
+            // Invalid UUID format
+            throw new Error('Product not found');
+          }
+          throw error;
+        }
+      }
+
+      // Update the flash sale
+      const updatedSale = await this.flashSaleRepository.update(saleId, {
+        product_id: updateData.productId || existingSale.product_id,
+        start_time: updateData.startTime || existingSale.start_time,
+        end_time: updateData.endTime || existingSale.end_time,
+        updated_at: new Date(),
+      });
+
+      // Clear cache
+      const redis = getRedisClient();
+      await redis.del(`flash_sale_status_${saleId}`);
+      await redis.del('flash_sale_status');
+
+      logger.info(`Flash sale ${saleId} updated successfully`);
+      return updatedSale;
+    } catch (error) {
+      logger.error(`Error updating flash sale ${saleId}:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get flash sale by ID
+   * @param {string} saleId - The sale ID
+   * @returns {Object|null} Flash sale or null if not found
+   */
+  async getFlashSaleById(saleId) {
+    try {
+      const flashSale = await this.flashSaleRepository.findById(saleId);
+      return flashSale;
+    } catch (error) {
+      if (error.code === '22P02') {
+        // Invalid UUID format
+        return null; // Return null for invalid UUIDs, let the route handle 404
+      }
+      logger.error(`Error getting flash sale ${saleId}:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get flash sale statistics (alias for getSaleStatistics)
+   * @param {string} saleId - The sale ID
+   * @returns {Object} Sale statistics
+   */
+  async getFlashSaleStats(saleId) {
+    return this.getSaleStatistics(saleId);
   }
 }
 

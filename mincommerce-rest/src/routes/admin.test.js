@@ -39,7 +39,7 @@ describe('Admin Routes - Flash Sale Management', () => {
   describe('Admin User Verification', () => {
     it('should have admin user in seeded database', async () => {
       const adminUser = await dbHelpers.findUserByEmail('admin@brilian.af');
-      
+
       expect(adminUser).toBeDefined();
       expect(adminUser.role).toBe('admin');
       expect(adminUser.email).toBe('admin@brilian.af');
@@ -48,9 +48,9 @@ describe('Admin Routes - Flash Sale Management', () => {
     it('should authenticate admin user successfully', async () => {
       const AuthService = require('../services/AuthService');
       const authService = new AuthService();
-      
+
       const result = await authService.authenticateAdmin('admin@brilian.af');
-      
+
       expect(result.success).toBe(true);
       expect(result.userType).toBe('admin');
       expect(result.email).toBe('admin@brilian.af');
@@ -59,6 +59,12 @@ describe('Admin Routes - Flash Sale Management', () => {
   });
 
   const createAdminToken = async () => {
+    // Ensure admin user exists before authenticating
+    await dbHelpers.createUser({
+      email: 'admin@brilian.af',
+      role: 'admin',
+    });
+
     const AuthService = require('../services/AuthService');
     const authService = new AuthService();
     const result = await authService.authenticateAdmin('admin@brilian.af');
@@ -169,7 +175,7 @@ describe('Admin Routes - Flash Sale Management', () => {
         .expect(400);
 
       expect(response.body.success).toBe(false);
-      expect(response.body.error).toContain('Product has no stock');
+      expect(response.body.error).toContain('Product not found or has no stock');
     });
 
     it('should require authentication', async () => {

@@ -132,6 +132,30 @@ class FlashSaleRepository extends BaseRepository {
       throw error;
     }
   }
+
+  /**
+   * Update flash sale by ID
+   * @param {string} saleId - Sale ID
+   * @param {Object} updateData - Data to update
+   * @returns {Object} Updated flash sale
+   */
+  async update(saleId, updateData) {
+    try {
+      const results = await this.db(this.tableName)
+        .where(this.idColumn, saleId)
+        .update(updateData)
+        .returning('*');
+
+      if (results.length === 0) {
+        return null;
+      }
+
+      return FlashSale.fromDatabase(results[0]);
+    } catch (error) {
+      logger.error(`Error updating flash sale ${saleId}:`, error);
+      throw error;
+    }
+  }
 }
 
 module.exports = FlashSaleRepository;

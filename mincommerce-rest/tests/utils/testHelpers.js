@@ -100,6 +100,16 @@ const dbHelpers = {
   },
 
   /**
+   * Create test product
+   */
+  async createProduct(productData = {}) {
+    const db = getDatabase();
+    const product = generateTestData.product(productData);
+    await db('products').insert(product);
+    return product;
+  },
+
+  /**
    * Create test product with stock
    */
   async createProductWithStock(productData = {}, stockData = {}) {
