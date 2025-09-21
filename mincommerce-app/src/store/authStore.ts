@@ -16,6 +16,8 @@ interface AuthActions {
   setLoading: (loading: boolean) => void
   setError: (error: string | null) => void
   clearError: () => void
+  setToken: (token: string) => void
+  setUser: (user: User) => void
 }
 
 type AuthStore = AuthState & AuthActions
@@ -69,6 +71,14 @@ export const useAuthStore = create<AuthStore>()(
 
       clearError: () => {
         set({ error: null })
+      },
+
+      setToken: (token: string) => {
+        set({ token, isAuthenticated: true })
+      },
+
+      setUser: (user: User) => {
+        set({ user })
       }
     }),
     {

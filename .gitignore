@@ -102,3 +102,7 @@ redis_data/
 # Test files
 test-results/
 coverage/
+
+# Playwright
+playwright-report/
+playwright/.cache/

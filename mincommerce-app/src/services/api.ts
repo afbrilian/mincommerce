@@ -106,7 +106,7 @@ class ApiService {
   }
 
   // Purchase endpoints
-  async purchase(): Promise<ApiResponse> {
+  async queuePurchase(): Promise<ApiResponse> {
     const response: AxiosResponse<ApiResponse> = await this.api.post('/purchase')
     return response.data
   }
@@ -136,5 +136,34 @@ class ApiService {
 }
 
 // Create and export a singleton instance
-export const apiService = new ApiService()
-export default apiService
+const apiService = new ApiService()
+
+// Export organized API methods
+export const api = {
+  auth: {
+    login: (email: string) => apiService.login({ email }),
+    verifyToken: (token: string) => apiService.verifyToken(token)
+  },
+  flashSale: {
+    getStatus: () => apiService.getFlashSaleStatus()
+  },
+  admin: {
+    createFlashSale: (data: FlashSaleFormData) => apiService.createFlashSale(data),
+    updateFlashSale: (data: FlashSaleFormData) => apiService.updateFlashSale(data),
+    getFlashSaleDetails: (saleId: string) => apiService.getFlashSaleDetails(saleId),
+    getFlashSaleStats: (saleId: string) => apiService.getFlashSaleStats(saleId)
+  },
+  purchase: {
+    queuePurchase: () => apiService.queuePurchase(),
+    getStatus: () => apiService.getPurchaseStatus()
+  },
+  queue: {
+    getStats: () => apiService.getQueueStats(),
+    getHealth: () => apiService.getQueueHealth()
+  },
+  health: {
+    check: () => apiService.getHealth()
+  }
+}
+
+export default api
