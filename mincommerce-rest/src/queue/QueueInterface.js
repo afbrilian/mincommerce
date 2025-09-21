@@ -11,7 +11,7 @@ class QueueInterface {
    * @returns {Promise<Object>} Job instance
    */
   async addJob(type, data, _options = {}) {
-    throw new Error('addJob method must be implemented');
+    throw new Error('addJob method must be implemented')
   }
 
   /**
@@ -20,7 +20,7 @@ class QueueInterface {
    * @param {Function} _processor - Job processor function
    */
   process(_type, _processor) {
-    throw new Error('process method must be implemented');
+    throw new Error('process method must be implemented')
   }
 
   /**
@@ -29,7 +29,7 @@ class QueueInterface {
    * @returns {Promise<Object>} Job instance
    */
   async getJob(_jobId) {
-    throw new Error('getJob method must be implemented');
+    throw new Error('getJob method must be implemented')
   }
 
   /**
@@ -38,7 +38,7 @@ class QueueInterface {
    * @returns {Promise<string>} Job status
    */
   async getJobStatus(_jobId) {
-    throw new Error('getJobStatus method must be implemented');
+    throw new Error('getJobStatus method must be implemented')
   }
 
   /**
@@ -46,7 +46,7 @@ class QueueInterface {
    * @returns {Promise<void>}
    */
   async close() {
-    throw new Error('close method must be implemented');
+    throw new Error('close method must be implemented')
   }
 
   /**
@@ -54,8 +54,8 @@ class QueueInterface {
    * @returns {Promise<Object>} Queue stats
    */
   async getStats() {
-    throw new Error('getStats method must be implemented');
+    throw new Error('getStats method must be implemented')
   }
 }
 
-module.exports = QueueInterface;
+module.exports = QueueInterface

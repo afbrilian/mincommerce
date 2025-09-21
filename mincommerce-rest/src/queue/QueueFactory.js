@@ -1,7 +1,7 @@
-const BullQueueProvider = require('./providers/BullQueueProvider');
-const KafkaQueueProvider = require('./providers/KafkaQueueProvider');
-const SQSQueueProvider = require('./providers/SQSQueueProvider');
-const logger = require('../utils/logger');
+const BullQueueProvider = require('./providers/BullQueueProvider')
+const KafkaQueueProvider = require('./providers/KafkaQueueProvider')
+const SQSQueueProvider = require('./providers/SQSQueueProvider')
+const logger = require('../utils/logger')
 
 /**
  * Queue Factory - Creates and manages queue providers
@@ -9,8 +9,8 @@ const logger = require('../utils/logger');
  */
 class QueueFactory {
   constructor() {
-    this.providers = new Map();
-    this.defaultProvider = null;
+    this.providers = new Map()
+    this.defaultProvider = null
   }
 
   /**
@@ -22,13 +22,13 @@ class QueueFactory {
   createProvider(providerType, config) {
     switch (providerType.toLowerCase()) {
       case 'bull':
-        return new BullQueueProvider(config);
+        return new BullQueueProvider(config)
       case 'kafka':
-        return new KafkaQueueProvider(config);
+        return new KafkaQueueProvider(config)
       case 'sqs':
-        return new SQSQueueProvider(config);
+        return new SQSQueueProvider(config)
       default:
-        throw new Error(`Unsupported queue provider: ${providerType}`);
+        throw new Error(`Unsupported queue provider: ${providerType}`)
     }
   }
 
@@ -39,28 +39,30 @@ class QueueFactory {
   async initializeProviders(queueConfig) {
     try {
       // Initialize default provider
-      const defaultProviderType = queueConfig.default || 'bull';
-      const defaultConfig = queueConfig.providers[defaultProviderType];
-      
+      const defaultProviderType = queueConfig.default || 'bull'
+      const defaultConfig = queueConfig.providers[defaultProviderType]
+
       if (!defaultConfig) {
-        throw new Error(`Configuration not found for provider: ${defaultProviderType}`);
+        throw new Error(`Configuration not found for provider: ${defaultProviderType}`)
       }
 
-      this.defaultProvider = this.createProvider(defaultProviderType, defaultConfig);
-      this.providers.set('default', this.defaultProvider);
+      this.defaultProvider = this.createProvider(defaultProviderType, defaultConfig)
+      this.providers.set('default', this.defaultProvider)
 
       // Initialize additional providers if configured
       for (const [providerType, config] of Object.entries(queueConfig.providers)) {
         if (providerType !== defaultProviderType) {
-          const provider = this.createProvider(providerType, config);
-          this.providers.set(providerType, provider);
+          const provider = this.createProvider(providerType, config)
+          this.providers.set(providerType, provider)
         }
       }
 
-      logger.info(`Queue factory initialized with providers: ${Array.from(this.providers.keys()).join(', ')}`);
+      logger.info(
+        `Queue factory initialized with providers: ${Array.from(this.providers.keys()).join(', ')}`
+      )
     } catch (error) {
-      logger.error('Failed to initialize queue providers:', error);
-      throw error;
+      logger.error('Failed to initialize queue providers:', error)
+      throw error
     }
   }
 
@@ -70,11 +72,11 @@ class QueueFactory {
    * @returns {QueueInterface} Queue provider instance
    */
   getProvider(providerType = 'default') {
-    const provider = this.providers.get(providerType);
+    const provider = this.providers.get(providerType)
     if (!provider) {
-      throw new Error(`Queue provider not found: ${providerType}`);
+      throw new Error(`Queue provider not found: ${providerType}`)
     }
-    return provider;
+    return provider
   }
 
   /**
@@ -83,9 +85,9 @@ class QueueFactory {
    */
   getDefaultProvider() {
     if (!this.defaultProvider) {
-      throw new Error('No default queue provider initialized');
+      throw new Error('No default queue provider initialized')
     }
-    return this.defaultProvider;
+    return this.defaultProvider
   }
 
   /**
@@ -96,7 +98,7 @@ class QueueFactory {
    * @returns {Promise<Object>} Job instance
    */
   async addJob(type, data, options = {}) {
-    return this.getDefaultProvider().addJob(type, data, options);
+    return this.getDefaultProvider().addJob(type, data, options)
   }
 
   /**
@@ -105,7 +107,7 @@ class QueueFactory {
    * @param {Function} processor - Job processor
    */
   process(type, processor) {
-    this.getDefaultProvider().process(type, processor);
+    this.getDefaultProvider().process(type, processor)
   }
 
   /**
@@ -117,15 +119,15 @@ class QueueFactory {
     // Try all providers to find the job
     for (const [providerType, provider] of this.providers) {
       try {
-        const job = await provider.getJob(jobId);
+        const job = await provider.getJob(jobId)
         if (job) {
-          return job;
+          return job
         }
       } catch (error) {
-        logger.warn(`Error getting job ${jobId} from provider ${providerType}:`, error.message);
+        logger.warn(`Error getting job ${jobId} from provider ${providerType}:`, error.message)
       }
     }
-    return null;
+    return null
   }
 
   /**
@@ -134,8 +136,8 @@ class QueueFactory {
    * @returns {Promise<string>} Job status
    */
   async getJobStatus(jobId) {
-    const job = await this.getJob(jobId);
-    return job ? job.status : 'not_found';
+    const job = await this.getJob(jobId)
+    return job ? job.status : 'not_found'
   }
 
   /**
@@ -143,16 +145,16 @@ class QueueFactory {
    * @returns {Promise<Object>} Combined statistics
    */
   async getStats() {
-    const stats = {};
+    const stats = {}
     for (const [providerType, provider] of this.providers) {
       try {
-        stats[providerType] = await provider.getStats();
+        stats[providerType] = await provider.getStats()
       } catch (error) {
-        logger.warn(`Error getting stats from provider ${providerType}:`, error.message);
-        stats[providerType] = { error: error.message };
+        logger.warn(`Error getting stats from provider ${providerType}:`, error.message)
+        stats[providerType] = { error: error.message }
       }
     }
-    return stats;
+    return stats
   }
 
   /**
@@ -160,11 +162,11 @@ class QueueFactory {
    * @returns {Promise<void>}
    */
   async close() {
-    const promises = Array.from(this.providers.values()).map(provider => provider.close());
-    await Promise.all(promises);
-    this.providers.clear();
-    this.defaultProvider = null;
-    logger.info('All queue providers closed');
+    const promises = Array.from(this.providers.values()).map(provider => provider.close())
+    await Promise.all(promises)
+    this.providers.clear()
+    this.defaultProvider = null
+    logger.info('All queue providers closed')
   }
 
   /**
@@ -172,8 +174,8 @@ class QueueFactory {
    * @returns {Array<string>} Provider types
    */
   getAvailableProviders() {
-    return Array.from(this.providers.keys());
+    return Array.from(this.providers.keys())
   }
 }
 
-module.exports = QueueFactory;
+module.exports = QueueFactory

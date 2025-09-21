@@ -1,15 +1,15 @@
 class Order {
   constructor(data) {
-    this.orderId = data.order_id;
-    this.userId = data.user_id;
-    this.productId = data.product_id;
-    this.status = data.status;
-    this.createdAt = data.created_at;
-    this.updatedAt = data.updated_at;
+    this.orderId = data.order_id
+    this.userId = data.user_id
+    this.productId = data.product_id
+    this.status = data.status
+    this.createdAt = data.created_at
+    this.updatedAt = data.updated_at
   }
 
   static fromDatabase(data) {
-    return new Order(data);
+    return new Order(data)
   }
 
   toJSON() {
@@ -19,21 +19,21 @@ class Order {
       productId: this.productId,
       status: this.status,
       createdAt: this.createdAt,
-      updatedAt: this.updatedAt,
-    };
+      updatedAt: this.updatedAt
+    }
   }
 
   get isConfirmed() {
-    return this.status === 'confirmed';
+    return this.status === 'confirmed'
   }
 
   get isPending() {
-    return this.status === 'pending';
+    return this.status === 'pending'
   }
 
   get isFailed() {
-    return this.status === 'failed';
+    return this.status === 'failed'
   }
 }
 
-module.exports = Order;
+module.exports = Order

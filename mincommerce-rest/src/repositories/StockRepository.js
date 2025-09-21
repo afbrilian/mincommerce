@@ -1,29 +1,29 @@
-const BaseRepository = require('./BaseRepository');
-const Stock = require('../models/Stock');
-const logger = require('../utils/logger');
+const BaseRepository = require('./BaseRepository')
+const Stock = require('../models/Stock')
+const logger = require('../utils/logger')
 
 class StockRepository extends BaseRepository {
   constructor() {
-    super('stocks');
+    super('stocks')
   }
 
   async findByProductId(productId) {
     try {
-      const result = await this.db(this.tableName).where('product_id', productId).first();
-      return result ? Stock.fromDatabase(result) : null;
+      const result = await this.db(this.tableName).where('product_id', productId).first()
+      return result ? Stock.fromDatabase(result) : null
     } catch (error) {
-      logger.error(`Error finding stock by product id ${productId}:`, error);
-      throw error;
+      logger.error(`Error finding stock by product id ${productId}:`, error)
+      throw error
     }
   }
 
   async create(stockData) {
     try {
-      const results = await this.db(this.tableName).insert(stockData).returning('*');
-      return Stock.fromDatabase(results[0]);
+      const results = await this.db(this.tableName).insert(stockData).returning('*')
+      return Stock.fromDatabase(results[0])
     } catch (error) {
-      logger.error('Error creating stock:', error);
-      throw error;
+      logger.error('Error creating stock:', error)
+      throw error
     }
   }
 
@@ -35,11 +35,11 @@ class StockRepository extends BaseRepository {
         .increment('available_quantity', quantityChange)
         .update('last_updated', this.db.fn.now())
         .returning('*')
-        .first();
-      return result ? Stock.fromDatabase(result) : null;
+        .first()
+      return result ? Stock.fromDatabase(result) : null
     } catch (error) {
-      logger.error(`Error updating available quantity for product ${productId}:`, error);
-      throw error;
+      logger.error(`Error updating available quantity for product ${productId}:`, error)
+      throw error
     }
   }
 
@@ -52,11 +52,11 @@ class StockRepository extends BaseRepository {
         .increment('reserved_quantity', quantity)
         .update('last_updated', this.db.fn.now())
         .returning('*')
-        .first();
-      return result ? Stock.fromDatabase(result) : null;
+        .first()
+      return result ? Stock.fromDatabase(result) : null
     } catch (error) {
-      logger.error(`Error reserving stock for product ${productId}:`, error);
-      throw error;
+      logger.error(`Error reserving stock for product ${productId}:`, error)
+      throw error
     }
   }
 
@@ -69,11 +69,11 @@ class StockRepository extends BaseRepository {
         .decrement('reserved_quantity', quantity)
         .update('last_updated', this.db.fn.now())
         .returning('*')
-        .first();
-      return result ? Stock.fromDatabase(result) : null;
+        .first()
+      return result ? Stock.fromDatabase(result) : null
     } catch (error) {
-      logger.error(`Error releasing stock for product ${productId}:`, error);
-      throw error;
+      logger.error(`Error releasing stock for product ${productId}:`, error)
+      throw error
     }
   }
 
@@ -85,11 +85,11 @@ class StockRepository extends BaseRepository {
         .decrement('reserved_quantity', quantity)
         .update('last_updated', this.db.fn.now())
         .returning('*')
-        .first();
-      return result ? Stock.fromDatabase(result) : null;
+        .first()
+      return result ? Stock.fromDatabase(result) : null
     } catch (error) {
-      logger.error(`Error confirming stock for product ${productId}:`, error);
-      throw error;
+      logger.error(`Error confirming stock for product ${productId}:`, error)
+      throw error
     }
   }
 
@@ -98,13 +98,13 @@ class StockRepository extends BaseRepository {
       const result = await this.db(this.tableName)
         .select('available_quantity', 'total_quantity', 'reserved_quantity')
         .where('product_id', productId)
-        .first();
-      return result;
+        .first()
+      return result
     } catch (error) {
-      logger.error(`Error getting available stock for product ${productId}:`, error);
-      throw error;
+      logger.error(`Error getting available stock for product ${productId}:`, error)
+      throw error
     }
   }
 }
 
-module.exports = StockRepository;
+module.exports = StockRepository

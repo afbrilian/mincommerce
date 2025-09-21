@@ -1,17 +1,17 @@
 class User {
   constructor(data) {
-    this.userId = data.user_id;
-    this.email = data.email;
-    this.role = data.role;
-    this.createdAt = data.created_at;
+    this.userId = data.user_id
+    this.email = data.email
+    this.role = data.role
+    this.createdAt = data.created_at
   }
 
   static fromDatabase(data) {
-    return new User(data);
+    return new User(data)
   }
 
   isAdmin() {
-    return this.role === 'admin';
+    return this.role === 'admin'
   }
 
   toJSON() {
@@ -19,9 +19,9 @@ class User {
       userId: this.userId,
       email: this.email,
       role: this.role,
-      createdAt: this.createdAt,
-    };
+      createdAt: this.createdAt
+    }
   }
 }
 
-module.exports = User;
+module.exports = User

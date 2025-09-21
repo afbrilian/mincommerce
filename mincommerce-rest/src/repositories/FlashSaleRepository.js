@@ -1,19 +1,19 @@
-const BaseRepository = require('./BaseRepository');
-const FlashSale = require('../models/FlashSale');
-const logger = require('../utils/logger');
+const BaseRepository = require('./BaseRepository')
+const FlashSale = require('../models/FlashSale')
+const logger = require('../utils/logger')
 
 class FlashSaleRepository extends BaseRepository {
   constructor() {
-    super('flash_sales', 'sale_id');
+    super('flash_sales', 'sale_id')
   }
 
   async findById(saleId) {
     try {
-      const result = await this.db(this.tableName).where('sale_id', saleId).first();
-      return result ? FlashSale.fromDatabase(result) : null;
+      const result = await this.db(this.tableName).where('sale_id', saleId).first()
+      return result ? FlashSale.fromDatabase(result) : null
     } catch (error) {
-      logger.error(`Error finding flash sale by id ${saleId}:`, error);
-      throw error;
+      logger.error(`Error finding flash sale by id ${saleId}:`, error)
+      throw error
     }
   }
 
@@ -22,48 +22,48 @@ class FlashSaleRepository extends BaseRepository {
       const result = await this.db(this.tableName)
         .where('product_id', productId)
         .orderBy('created_at', 'desc')
-        .first();
-      return result ? FlashSale.fromDatabase(result) : null;
+        .first()
+      return result ? FlashSale.fromDatabase(result) : null
     } catch (error) {
-      logger.error(`Error finding flash sale by product id ${productId}:`, error);
-      throw error;
+      logger.error(`Error finding flash sale by product id ${productId}:`, error)
+      throw error
     }
   }
 
   async findActiveSales() {
     try {
-      const now = new Date();
+      const now = new Date()
       const results = await this.db(this.tableName)
         .where('status', 'active')
         .where('start_time', '<=', now)
-        .where('end_time', '>=', now);
-      return results.map(sale => FlashSale.fromDatabase(sale));
+        .where('end_time', '>=', now)
+      return results.map(sale => FlashSale.fromDatabase(sale))
     } catch (error) {
-      logger.error('Error finding active flash sales:', error);
-      throw error;
+      logger.error('Error finding active flash sales:', error)
+      throw error
     }
   }
 
   async findUpcomingSales() {
     try {
-      const now = new Date();
+      const now = new Date()
       const results = await this.db(this.tableName)
         .where('status', 'upcoming')
-        .where('start_time', '>', now);
-      return results.map(sale => FlashSale.fromDatabase(sale));
+        .where('start_time', '>', now)
+      return results.map(sale => FlashSale.fromDatabase(sale))
     } catch (error) {
-      logger.error('Error finding upcoming flash sales:', error);
-      throw error;
+      logger.error('Error finding upcoming flash sales:', error)
+      throw error
     }
   }
 
   async create(saleData) {
     try {
-      const results = await this.db(this.tableName).insert(saleData).returning('*');
-      return FlashSale.fromDatabase(results[0]);
+      const results = await this.db(this.tableName).insert(saleData).returning('*')
+      return FlashSale.fromDatabase(results[0])
     } catch (error) {
-      logger.error('Error creating flash sale:', error);
-      throw error;
+      logger.error('Error creating flash sale:', error)
+      throw error
     }
   }
 
@@ -73,19 +73,19 @@ class FlashSaleRepository extends BaseRepository {
         .where('sale_id', saleId)
         .update({
           status,
-          updated_at: this.db.fn.now(),
+          updated_at: this.db.fn.now()
         })
-        .returning('*');
-      return results[0] ? FlashSale.fromDatabase(results[0]) : null;
+        .returning('*')
+      return results[0] ? FlashSale.fromDatabase(results[0]) : null
     } catch (error) {
-      logger.error(`Error updating flash sale status ${saleId}:`, error);
-      throw error;
+      logger.error(`Error updating flash sale status ${saleId}:`, error)
+      throw error
     }
   }
 
   async updateStatusByTime() {
     try {
-      const now = new Date();
+      const now = new Date()
 
       // Update upcoming sales to active
       await this.db(this.tableName)
@@ -94,19 +94,19 @@ class FlashSaleRepository extends BaseRepository {
         .where('end_time', '>=', now)
         .update({
           status: 'active',
-          updated_at: now,
-        });
+          updated_at: now
+        })
 
       // Update active sales to ended
       await this.db(this.tableName).where('status', 'active').where('end_time', '<', now).update({
         status: 'ended',
-        updated_at: now,
-      });
+        updated_at: now
+      })
 
-      logger.info('Flash sale statuses updated based on time');
+      logger.info('Flash sale statuses updated based on time')
     } catch (error) {
-      logger.error('Error updating flash sale statuses by time:', error);
-      throw error;
+      logger.error('Error updating flash sale statuses by time:', error)
+      throw error
     }
   }
 
@@ -124,12 +124,12 @@ class FlashSaleRepository extends BaseRepository {
           'stocks.total_quantity'
         )
         .where('flash_sales.sale_id', saleId)
-        .first();
+        .first()
 
-      return result;
+      return result
     } catch (error) {
-      logger.error(`Error getting flash sale with product and stock ${saleId}:`, error);
-      throw error;
+      logger.error(`Error getting flash sale with product and stock ${saleId}:`, error)
+      throw error
     }
   }
 
@@ -144,18 +144,18 @@ class FlashSaleRepository extends BaseRepository {
       const results = await this.db(this.tableName)
         .where(this.idColumn, saleId)
         .update(updateData)
-        .returning('*');
+        .returning('*')
 
       if (results.length === 0) {
-        return null;
+        return null
       }
 
-      return FlashSale.fromDatabase(results[0]);
+      return FlashSale.fromDatabase(results[0])
     } catch (error) {
-      logger.error(`Error updating flash sale ${saleId}:`, error);
-      throw error;
+      logger.error(`Error updating flash sale ${saleId}:`, error)
+      throw error
     }
   }
 }
 
-module.exports = FlashSaleRepository;
+module.exports = FlashSaleRepository

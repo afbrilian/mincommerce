@@ -35,27 +35,28 @@ module.exports = {
   // Redis cache keys
   REDIS_KEYS: {
     USER_ORDER: (userId, productId) => `user_order:${userId}:${productId}`,
-    ORDER: (orderId) => `order:${orderId}`,
-    FLASH_SALE_STATUS: (saleId = null) => saleId ? `flash_sale_status_${saleId}` : 'flash_sale_status',
-    RATE_LIMIT: (userId) => `rate_limit:${userId}`,
-    STOCK: (productId) => `stock:${productId}`,
-    SALE_STATS: (saleId) => `sale_stats:${saleId}`
+    ORDER: orderId => `order:${orderId}`,
+    FLASH_SALE_STATUS: (saleId = null) =>
+      saleId ? `flash_sale_status_${saleId}` : 'flash_sale_status',
+    RATE_LIMIT: userId => `rate_limit:${userId}`,
+    STOCK: productId => `stock:${productId}`,
+    SALE_STATS: saleId => `sale_stats:${saleId}`
   },
 
   // Cache TTL (Time To Live) in seconds
   CACHE_TTL: {
-    FLASH_SALE_STATUS: 30,      // 30 seconds - frequently changing
-    USER_ORDER: 3600,           // 1 hour - stable data
-    ORDER_DETAILS: 3600,        // 1 hour - stable data
-    STOCK_INFO: 60,             // 1 minute - moderately changing
-    SALE_STATS: 300,            // 5 minutes - aggregated data
-    RATE_LIMIT: 60              // 1 minute - rate limiting window
+    FLASH_SALE_STATUS: 30, // 30 seconds - frequently changing
+    USER_ORDER: 3600, // 1 hour - stable data
+    ORDER_DETAILS: 3600, // 1 hour - stable data
+    STOCK_INFO: 60, // 1 minute - moderately changing
+    SALE_STATS: 300, // 5 minutes - aggregated data
+    RATE_LIMIT: 60 // 1 minute - rate limiting window
   },
 
   // Rate limiting configuration
   RATE_LIMITS: {
     MAX_ATTEMPTS_PER_MINUTE: 10,
-    WINDOW_MS: 60000,           // 1 minute in milliseconds
+    WINDOW_MS: 60000, // 1 minute in milliseconds
     MAX_REQUESTS_PER_WINDOW: 100, // Global rate limit
     WINDOW_DURATION_MS: 15 * 60 * 1000 // 15 minutes
   },
@@ -178,4 +179,4 @@ module.exports = {
     STAGING: 'staging',
     PRODUCTION: 'production'
   }
-};
+}

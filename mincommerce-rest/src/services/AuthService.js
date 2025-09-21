@@ -5,7 +5,6 @@
 
 const jwt = require('jsonwebtoken')
 const UserRepository = require('../repositories/UserRepository')
-const { getRedisClient } = require('../config/redis')
 const logger = require('../utils/logger')
 const CONSTANTS = require('../constants')
 
