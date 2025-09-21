@@ -173,10 +173,18 @@ class PurchaseService {
           })
         )
 
-        logger.info(`Purchase successful`, {
+        // Invalidate flash sale status cache to force fresh stock data
+        const flashSaleCacheKeys = ['flash_sale_status', `flash_sale_status_${recentSale.sale_id}`]
+
+        for (const cacheKey of flashSaleCacheKeys) {
+          await redis.del(cacheKey)
+        }
+
+        logger.info(`Purchase successful and cache invalidated`, {
           userId,
           orderId: order.order_id,
-          productId: product.product_id
+          productId: product.product_id,
+          invalidatedCacheKeys: flashSaleCacheKeys
         })
 
         return {

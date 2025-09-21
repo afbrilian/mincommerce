@@ -43,6 +43,15 @@ export interface FlashSale {
   productPrice: number
 }
 
+export interface UserPurchaseEligibility {
+  canPurchase: boolean
+  reason?: string
+  hasCompletedPurchase?: boolean
+  hasPendingPurchase?: boolean
+  purchaseStatus?: string
+  jobId?: string
+}
+
 export interface FlashSaleStatus {
   saleId: string
   productId: string
@@ -55,6 +64,7 @@ export interface FlashSaleStatus {
   timeUntilEnd: number
   startTime: string
   endTime: string
+  userPurchaseEligibility?: UserPurchaseEligibility
 }
 
 export interface FlashSaleStats {

@@ -1,5 +1,6 @@
 const FlashSaleRepository = require('../repositories/FlashSaleRepository')
 const StockRepository = require('../repositories/StockRepository')
+const PurchaseQueueService = require('./PurchaseQueueService')
 const { getRedisClient } = require('../config/redis')
 const logger = require('../utils/logger')
 
@@ -7,6 +8,7 @@ class FlashSaleService {
   constructor() {
     this.flashSaleRepository = new FlashSaleRepository()
     this.stockRepository = new StockRepository()
+    this.purchaseQueueService = new PurchaseQueueService()
   }
 
   async getSaleStatus(saleId = null) {
@@ -324,6 +326,60 @@ class FlashSaleService {
    */
   async getFlashSaleStats(saleId) {
     return this.getSaleStatistics(saleId)
+  }
+
+  /**
+   * Check if user can purchase (hasn't purchased and no pending purchase)
+   * @param {string} userId - User ID to check
+   * @returns {Object} Purchase eligibility status
+   */
+  async checkUserPurchaseEligibility(userId) {
+    try {
+      if (!userId) {
+        return {
+          canPurchase: false,
+          reason: 'USER_NOT_FOUND'
+        }
+      }
+
+      const redis = getRedisClient()
+
+      // Check if user has a completed purchase
+      const userOrderKey = `user_order:${userId}`
+      const existingOrder = await redis.get(userOrderKey)
+
+      if (existingOrder) {
+        return {
+          canPurchase: false,
+          reason: 'ALREADY_PURCHASED',
+          hasCompletedPurchase: true
+        }
+      }
+
+      // Check if user has a pending purchase in queue
+      const queueStatus = await this.purchaseQueueService.getUserPurchaseStatus(userId)
+
+      if (queueStatus) {
+        return {
+          canPurchase: false,
+          reason: 'PURCHASE_IN_PROGRESS',
+          hasPendingPurchase: true,
+          purchaseStatus: queueStatus.status,
+          jobId: queueStatus.jobId
+        }
+      }
+
+      return {
+        canPurchase: true,
+        reason: null
+      }
+    } catch (error) {
+      logger.error('Error checking user purchase eligibility:', error)
+      return {
+        canPurchase: false,
+        reason: 'CHECK_FAILED'
+      }
+    }
   }
 }
 

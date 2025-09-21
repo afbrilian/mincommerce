@@ -242,6 +242,33 @@ class AuthService {
   }
 
   /**
+   * Optional authentication middleware - doesn't fail if user is not authenticated
+   * @param {Object} req - Express request object
+   * @param {Object} res - Express response object
+   * @param {Function} next - Next middleware function
+   */
+  optionalAuthenticateMiddleware(req, res, next) {
+    try {
+      const authHeader = req.headers.authorization
+      const token = this.extractTokenFromHeader(authHeader)
+
+      if (token) {
+        const decoded = this.verifyToken(token)
+        req.user = decoded
+      } else {
+        req.user = null
+      }
+
+      next()
+    } catch (error) {
+      logger.debug('Optional authentication failed:', error.message)
+      // Don't fail the request, just set user to null
+      req.user = null
+      next()
+    }
+  }
+
+  /**
    * Middleware for admin-only access
    * @param {Object} req - Express request object
    * @param {Object} res - Express response object

@@ -6,7 +6,6 @@ import { useAuthStore } from '../store/authStore'
 import { TEST_IDS } from '../constants'
 import {
   calculateFlashSaleStatus,
-  isBuyButtonEnabled,
   getStatusColorClasses,
   getStatusText,
   type FlashSaleStatus
@@ -22,6 +21,7 @@ const FlashSalePage: React.FC = () => {
   const [purchaseStatus, setPurchaseStatus] = useState<PurchaseStatus | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isLoadingPurchaseStatus, setIsLoadingPurchaseStatus] = useState(false)
+  const [isProcessingPurchase, setIsProcessingPurchase] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [timeLeft, setTimeLeft] = useState<{
     days: number
@@ -108,6 +108,17 @@ const FlashSalePage: React.FC = () => {
     return () => clearInterval(interval)
   }, [flashSaleStatus, updateCountdown])
 
+  // Poll flash sale status every 10 seconds to get updated stock and user eligibility
+  useEffect(() => {
+    if (!flashSaleStatus) return
+
+    const pollInterval = setInterval(() => {
+      fetchFlashSaleStatus()
+    }, 10000) // Poll every 10 seconds
+
+    return () => clearInterval(pollInterval)
+  }, [flashSaleStatus, fetchFlashSaleStatus])
+
   // Helper function to get current status
   const getCurrentStatus = useCallback((): FlashSaleStatus => {
     if (!flashSaleStatus) return FLASH_SALE_STATUS.UPCOMING
@@ -139,11 +150,18 @@ const FlashSalePage: React.FC = () => {
   }, [])
 
   const handlePurchase = async () => {
+    if (isProcessingPurchase) return // Prevent multiple clicks
+
+    setIsProcessingPurchase(true)
+    setError(null)
+
     try {
       const response = await api.purchase.queuePurchase()
       if (response.success) {
         // Handle successful queue
         alert('Purchase request queued! Check your purchase status.')
+        // Refresh flash sale status to get updated user eligibility
+        await fetchFlashSaleStatus()
         // Fetch the purchase status to show the user
         await fetchPurchaseStatus()
       }
@@ -153,6 +171,8 @@ const FlashSalePage: React.FC = () => {
           ? (err as { response?: { data?: { error?: string } } }).response?.data?.error
           : 'Purchase failed. Please try again.'
       alert(errorMessage || 'Purchase failed. Please try again.')
+    } finally {
+      setIsProcessingPurchase(false)
     }
   }
 
@@ -286,33 +306,64 @@ const FlashSalePage: React.FC = () => {
                       </span>
                     </div>
 
-                    {isBuyButtonEnabled(getCurrentStatus(), flashSaleStatus.availableQuantity) && (
-                      <button
-                        onClick={handlePurchase}
-                        className="w-full bg-indigo-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
-                      >
-                        Buy Now
-                      </button>
-                    )}
+                    {(() => {
+                      const currentStatus = getCurrentStatus()
+                      const isSaleActive = currentStatus === FLASH_SALE_STATUS.ACTIVE
+                      const hasStock = flashSaleStatus.availableQuantity > 0
+                      const canPurchase =
+                        flashSaleStatus.userPurchaseEligibility?.canPurchase ?? true
+                      const hasPendingPurchase =
+                        flashSaleStatus.userPurchaseEligibility?.hasPendingPurchase ?? false
+                      const hasCompletedPurchase =
+                        flashSaleStatus.userPurchaseEligibility?.hasCompletedPurchase ?? false
 
-                    {getCurrentStatus() === FLASH_SALE_STATUS.UPCOMING && (
-                      <div className="text-center py-4">
-                        <p className="text-gray-600">Sale hasn't started yet</p>
-                      </div>
-                    )}
+                      // Show different states based on user's purchase status
+                      if (hasCompletedPurchase) {
+                        return (
+                          <div className="w-full bg-green-100 text-green-800 py-3 px-4 rounded-lg font-medium text-center">
+                            ✅ Purchase Completed
+                          </div>
+                        )
+                      }
 
-                    {getCurrentStatus() === FLASH_SALE_STATUS.ENDED && (
-                      <div className="text-center py-4">
-                        <p className="text-gray-600">Sale has ended</p>
-                      </div>
-                    )}
+                      if (hasPendingPurchase) {
+                        const status = flashSaleStatus.userPurchaseEligibility?.purchaseStatus
+                        return (
+                          <div className="w-full bg-yellow-100 text-yellow-800 py-3 px-4 rounded-lg font-medium text-center">
+                            {status === 'processing' ? '⏳ Processing...' : '📦 Purchase Queued'}
+                          </div>
+                        )
+                      }
 
-                    {getCurrentStatus() === FLASH_SALE_STATUS.ACTIVE &&
-                      flashSaleStatus.availableQuantity === 0 && (
-                        <div className="text-center py-4">
-                          <p className="text-red-600 font-medium">Sold Out!</p>
-                        </div>
-                      )}
+                      if (!isSaleActive || !hasStock || !canPurchase) {
+                        return (
+                          <button
+                            disabled
+                            className="w-full bg-gray-400 text-white py-3 px-4 rounded-lg font-medium cursor-not-allowed"
+                          >
+                            {!isSaleActive
+                              ? 'Sale Not Active'
+                              : !hasStock
+                                ? 'Sold Out'
+                                : 'Cannot Purchase'}
+                          </button>
+                        )
+                      }
+
+                      return (
+                        <button
+                          onClick={handlePurchase}
+                          disabled={isProcessingPurchase}
+                          className={`w-full py-3 px-4 rounded-lg font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 ${
+                            isProcessingPurchase
+                              ? 'bg-gray-400 text-white cursor-not-allowed'
+                              : 'bg-indigo-600 text-white hover:bg-indigo-700'
+                          }`}
+                        >
+                          {isProcessingPurchase ? '⏳ Processing...' : 'Buy Now'}
+                        </button>
+                      )
+                    })()}
                   </div>
                 </div>
               </div>
