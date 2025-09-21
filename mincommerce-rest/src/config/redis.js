@@ -8,24 +8,18 @@ let redisSubscriber = null
 const connectRedis = async () => {
   try {
     const redisConfig = {
-      host: process.env.REDIS_HOST || 'localhost',
-      port: process.env.REDIS_PORT || 6379,
-      password: process.env.REDIS_PASSWORD || undefined,
-      retry_strategy: options => {
-        if (options.error && options.error.code === 'ECONNREFUSED') {
-          logger.error('Redis server connection refused')
-          return new Error('Redis server connection refused')
+      socket: {
+        host: process.env.REDIS_HOST || 'localhost',
+        port: process.env.REDIS_PORT || 6379,
+        reconnectStrategy: retries => {
+          if (retries > 10) {
+            logger.error('Redis max retry attempts reached')
+            return new Error('Max retry attempts reached')
+          }
+          return Math.min(retries * 100, 3000)
         }
-        if (options.total_retry_time > 1000 * 60 * 60) {
-          logger.error('Redis retry time exhausted')
-          return new Error('Retry time exhausted')
-        }
-        if (options.attempt > 10) {
-          logger.error('Redis max retry attempts reached')
-          return undefined
-        }
-        return Math.min(options.attempt * 100, 3000)
-      }
+      },
+      password: process.env.REDIS_PASSWORD || undefined
     }
 
     // Create Redis clients for different purposes

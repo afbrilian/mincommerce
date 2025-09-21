@@ -52,13 +52,13 @@ export default defineConfig({
       }
     }),
     // Bundle analyzer - only in production builds
-    process.env.ANALYZE && visualizer({
+    ...(process.env.ANALYZE ? [visualizer({
       filename: 'dist/stats.html',
       open: true,
       gzipSize: true,
       brotliSize: true,
-    })
-  ].filter(Boolean),
+    })] : [])
+  ],
   
   build: {
     // Enable source maps for production debugging

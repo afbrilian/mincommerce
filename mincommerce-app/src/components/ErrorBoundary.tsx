@@ -1,4 +1,5 @@
-import React, { Component, ErrorInfo, ReactNode } from 'react'
+import { Component } from 'react'
+import type { ErrorInfo, ReactNode } from 'react'
 import { logError } from '../utils/monitoring'
 
 interface Props {
@@ -22,7 +23,7 @@ class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    logError(error, errorInfo)
+    logError(error, { componentStack: errorInfo.componentStack || '' })
   }
 
   render() {

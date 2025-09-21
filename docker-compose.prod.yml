@@ -1,0 +1,20 @@
+# Production override for docker-compose.yml
+
+services:
+  # Only run production frontend
+  frontend-dev:
+    profiles:
+      - development
+
+  # Production API
+  api:
+    environment:
+      NODE_ENV: production
+    volumes: []  # No volume mounting in production
+    command: npm start
+
+  # Production Nginx (routes to prod frontend)
+  nginx:
+    depends_on:
+      - api
+      - frontend-prod
