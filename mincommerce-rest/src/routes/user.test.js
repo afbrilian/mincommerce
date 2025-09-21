@@ -28,6 +28,7 @@ describe('User Routes - Flash Sale Access', () => {
     const productData = await dbHelpers.createProductWithStock(
       {
         name: 'Test Product',
+        description: 'A test product for flash sale testing',
         price: 99.99
       },
       {
@@ -69,6 +70,7 @@ describe('User Routes - Flash Sale Access', () => {
       expect(response.body.data.status).toBe(CONSTANTS.SALE_STATUS.ACTIVE)
       expect(response.body.data.productId).toBe(testProduct.product_id)
       expect(response.body.data.productName).toBe(testProduct.name)
+      expect(response.body.data.productDescription).toBe(testProduct.description)
       expect(response.body.data.productPrice).toBe(testProduct.price)
       expect(response.body.data.totalQuantity).toBe(100)
       expect(response.body.data.availableQuantity).toBe(100)

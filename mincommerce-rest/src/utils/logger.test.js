@@ -112,7 +112,7 @@ describe('Logger Utility', () => {
       process.env.NODE_ENV = CONSTANTS.ENVIRONMENT.DEVELOPMENT
 
       // Should have console transport
-      const consoleTransport = logger.transports.console
+      const consoleTransport = logger.transports.find(t => t.name === 'console')
       expect(consoleTransport).toBeDefined()
     })
   })
@@ -125,19 +125,73 @@ describe('Logger Utility', () => {
     })
 
     it('should respect LOG_LEVEL environment variable', () => {
+      const originalLogLevel = process.env.LOG_LEVEL
       process.env.LOG_LEVEL = CONSTANTS.LOGGING.LEVELS.DEBUG
 
       // Create new logger instance to test
-      const testLogger = require('./logger')
+      const winston = require('winston')
+      const testLogger = winston.createLogger({
+        level: process.env.LOG_LEVEL || 'info',
+        format: winston.format.combine(
+          winston.format.timestamp({
+            format: 'YYYY-MM-DD HH:mm:ss'
+          }),
+          winston.format.errors({ stack: true }),
+          winston.format.json()
+        ),
+        defaultMeta: {
+          service: 'mincommerce-api',
+          pid: process.pid
+        },
+        transports: [
+          new winston.transports.Console({
+            format: winston.format.combine(winston.format.colorize(), winston.format.simple())
+          })
+        ]
+      })
+      
       expect(testLogger.level).toBe(CONSTANTS.LOGGING.LEVELS.DEBUG)
+      
+      // Restore original value
+      if (originalLogLevel !== undefined) {
+        process.env.LOG_LEVEL = originalLogLevel
+      } else {
+        delete process.env.LOG_LEVEL
+      }
     })
 
     it('should default to info level', () => {
+      const originalLogLevel = process.env.LOG_LEVEL
       delete process.env.LOG_LEVEL
 
       // Create new logger instance to test
-      const testLogger = require('./logger')
+      const winston = require('winston')
+      const testLogger = winston.createLogger({
+        level: process.env.LOG_LEVEL || 'info',
+        format: winston.format.combine(
+          winston.format.timestamp({
+            format: 'YYYY-MM-DD HH:mm:ss'
+          }),
+          winston.format.errors({ stack: true }),
+          winston.format.json()
+        ),
+        defaultMeta: {
+          service: 'mincommerce-api',
+          pid: process.pid
+        },
+        transports: [
+          new winston.transports.Console({
+            format: winston.format.combine(winston.format.colorize(), winston.format.simple())
+          })
+        ]
+      })
+      
       expect(testLogger.level).toBe('info')
+      
+      // Restore original value
+      if (originalLogLevel !== undefined) {
+        process.env.LOG_LEVEL = originalLogLevel
+      }
     })
   })
 

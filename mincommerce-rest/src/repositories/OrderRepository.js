@@ -1,5 +1,4 @@
 const BaseRepository = require('./BaseRepository')
-const Order = require('../models/Order')
 const logger = require('../utils/logger')
 
 class OrderRepository extends BaseRepository {
@@ -10,7 +9,7 @@ class OrderRepository extends BaseRepository {
   async findById(orderId) {
     try {
       const result = await this.db(this.tableName).where('order_id', orderId).first()
-      return result ? Order.fromDatabase(result) : null
+      return result || null
     } catch (error) {
       logger.error(`Error finding order by id ${orderId}:`, error)
       throw error
@@ -23,7 +22,7 @@ class OrderRepository extends BaseRepository {
         .where('user_id', userId)
         .where('product_id', productId)
         .first()
-      return result ? Order.fromDatabase(result) : null
+      return result || null
     } catch (error) {
       logger.error(`Error finding order by user ${userId} and product ${productId}:`, error)
       throw error
@@ -35,7 +34,7 @@ class OrderRepository extends BaseRepository {
       const results = await this.db(this.tableName)
         .where('user_id', userId)
         .orderBy('created_at', 'desc')
-      return results.map(order => Order.fromDatabase(order))
+      return results
     } catch (error) {
       logger.error(`Error finding orders by user id ${userId}:`, error)
       throw error
@@ -47,7 +46,7 @@ class OrderRepository extends BaseRepository {
       const results = await this.db(this.tableName)
         .where('product_id', productId)
         .orderBy('created_at', 'desc')
-      return results.map(order => Order.fromDatabase(order))
+      return results
     } catch (error) {
       logger.error(`Error finding orders by product id ${productId}:`, error)
       throw error
@@ -57,7 +56,7 @@ class OrderRepository extends BaseRepository {
   async create(orderData) {
     try {
       const results = await this.db(this.tableName).insert(orderData).returning('*')
-      return Order.fromDatabase(results[0])
+      return results[0]
     } catch (error) {
       logger.error('Error creating order:', error)
       throw error
@@ -74,7 +73,7 @@ class OrderRepository extends BaseRepository {
         })
         .returning('*')
         .first()
-      return result ? Order.fromDatabase(result) : null
+      return result || null
     } catch (error) {
       logger.error(`Error updating order status ${orderId}:`, error)
       throw error

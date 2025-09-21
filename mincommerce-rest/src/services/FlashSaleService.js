@@ -49,6 +49,7 @@ class FlashSaleService {
         saleId: sale.sale_id,
         productId: sale.product_id,
         productName: sale.product_name,
+        productDescription: sale.product_description,
         productPrice: parseFloat(sale.price),
         imageUrl: sale.image_url,
         startTime: sale.start_time,
@@ -103,10 +104,38 @@ class FlashSaleService {
         status: 'upcoming'
       })
 
-      logger.info(`Flash sale created: ${flashSale.saleId}`)
-      return flashSale
+      logger.info(`Flash sale created: ${flashSale.sale_id}`)
+      
+      // Map snake_case to camelCase for API response
+      return {
+        saleId: flashSale.sale_id,
+        productId: flashSale.product_id,
+        startTime: flashSale.start_time,
+        endTime: flashSale.end_time,
+        status: flashSale.status,
+        createdAt: flashSale.created_at,
+        updatedAt: flashSale.updated_at
+      }
     } catch (error) {
       logger.error('Error creating flash sale:', error)
+      throw error
+    }
+  }
+
+  async getFlashSaleById(saleId) {
+    try {
+      if (!saleId) {
+        throw new Error('Sale ID is required')
+      }
+
+      const flashSale = await this.flashSaleRepository.getSaleWithProductAndStock(saleId)
+      return flashSale
+    } catch (error) {
+      if (error.code === '22P02') {
+        // Invalid UUID format
+        return null
+      }
+      logger.error('Error getting flash sale by ID:', error)
       throw error
     }
   }
@@ -129,7 +158,17 @@ class FlashSaleService {
       await redis.del(`flash_sale_status_${saleId}`)
 
       logger.info(`Flash sale status updated: ${saleId} -> ${status}`)
-      return updatedSale
+      
+      // Map snake_case to camelCase for API response
+      return {
+        saleId: updatedSale.sale_id,
+        productId: updatedSale.product_id,
+        startTime: updatedSale.start_time,
+        endTime: updatedSale.end_time,
+        status: updatedSale.status,
+        createdAt: updatedSale.created_at,
+        updatedAt: updatedSale.updated_at
+      }
     } catch (error) {
       logger.error(`Error updating flash sale status ${saleId}:`, error)
       throw error
@@ -173,8 +212,8 @@ class FlashSaleService {
         confirmedOrders: orderStats.confirmed || 0,
         pendingOrders: orderStats.pending || 0,
         failedOrders: orderStats.failed || 0,
-        totalQuantity: stock?.totalQuantity || 0,
-        availableQuantity: stock ? stock.availableQuantity - (orderStats.confirmed || 0) : 0,
+        totalQuantity: stock?.total_quantity || 0,
+        availableQuantity: stock ? stock.available_quantity - (orderStats.confirmed || 0) : 0,
         soldQuantity: orderStats.confirmed || 0,
         conversionRate:
           orderStats.total > 0 ? ((orderStats.confirmed / orderStats.total) * 100).toFixed(2) : 0
@@ -261,31 +300,23 @@ class FlashSaleService {
       await redis.del('flash_sale_status')
 
       logger.info(`Flash sale ${saleId} updated successfully`)
-      return updatedSale
+      
+      // Map snake_case to camelCase for API response
+      return {
+        saleId: updatedSale.sale_id,
+        productId: updatedSale.product_id,
+        startTime: updatedSale.start_time,
+        endTime: updatedSale.end_time,
+        status: updatedSale.status,
+        createdAt: updatedSale.created_at,
+        updatedAt: updatedSale.updated_at
+      }
     } catch (error) {
       logger.error(`Error updating flash sale ${saleId}:`, error)
       throw error
     }
   }
 
-  /**
-   * Get flash sale by ID
-   * @param {string} saleId - The sale ID
-   * @returns {Object|null} Flash sale or null if not found
-   */
-  async getFlashSaleById(saleId) {
-    try {
-      const flashSale = await this.flashSaleRepository.findById(saleId)
-      return flashSale
-    } catch (error) {
-      if (error.code === '22P02') {
-        // Invalid UUID format
-        return null // Return null for invalid UUIDs, let the route handle 404
-      }
-      logger.error(`Error getting flash sale ${saleId}:`, error)
-      throw error
-    }
-  }
 
   /**
    * Get flash sale statistics (alias for getSaleStatistics)

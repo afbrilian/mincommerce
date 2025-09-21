@@ -38,7 +38,7 @@ class PurchaseService {
         logger.warn(`User already has an order`, { userId })
         return {
           success: false,
-          reason: 'User has already purchased'
+          reason: CONSTANTS.RESPONSE_CODES.ALREADY_PURCHASED
         }
       }
 
@@ -62,7 +62,7 @@ class PurchaseService {
         })
         return {
           success: false,
-          reason: 'Flash sale has not started'
+          reason: CONSTANTS.RESPONSE_CODES.SALE_NOT_ACTIVE
         }
       }
 
@@ -75,7 +75,7 @@ class PurchaseService {
         })
         return {
           success: false,
-          reason: 'Flash sale has ended'
+          reason: CONSTANTS.RESPONSE_CODES.SALE_NOT_ACTIVE
         }
       }
 
@@ -94,7 +94,7 @@ class PurchaseService {
         logger.warn(`Product is out of stock`, { userId, productId: product.product_id })
         return {
           success: false,
-          reason: 'Product is out of stock'
+          reason: CONSTANTS.RESPONSE_CODES.OUT_OF_STOCK
         }
       }
 
@@ -111,7 +111,7 @@ class PurchaseService {
           logger.warn(`Stock exhausted during purchase`, { userId, productId: product.product_id })
           return {
             success: false,
-            reason: 'Product is out of stock'
+            reason: CONSTANTS.RESPONSE_CODES.OUT_OF_STOCK
           }
         }
 
@@ -128,7 +128,7 @@ class PurchaseService {
           })
           return {
             success: false,
-            reason: 'Product is out of stock'
+            reason: CONSTANTS.RESPONSE_CODES.OUT_OF_STOCK
           }
         }
 
@@ -145,26 +145,26 @@ class PurchaseService {
 
         // Cache user order in Redis
         await redis.setEx(userOrderKey, 3600, JSON.stringify({
-          orderId: order.orderId,
+          orderId: order.order_id,
           productId: product.product_id,
           status: 'confirmed',
-          purchasedAt: order.createdAt
+          purchasedAt: order.created_at
         }))
 
         logger.info(`Purchase successful`, { 
           userId, 
-          orderId: order.orderId,
+          orderId: order.order_id,
           productId: product.product_id
         })
 
         return {
           success: true,
           data: {
-            orderId: order.orderId,
+            orderId: order.order_id,
             productId: product.product_id,
             userId: userId,
             status: 'confirmed',
-            purchasedAt: order.createdAt
+            purchasedAt: order.created_at
           }
         }
 
@@ -179,11 +179,39 @@ class PurchaseService {
       if (error.message.includes('already purchased')) {
         return {
           success: false,
-          reason: 'User has already purchased'
+          reason: CONSTANTS.RESPONSE_CODES.ALREADY_PURCHASED
         }
       }
 
-      throw error
+      // Handle database constraint violations
+      if (error.code === '23505' && error.constraint === 'orders_user_id_product_id_unique') {
+        return {
+          success: false,
+          reason: CONSTANTS.RESPONSE_CODES.ALREADY_PURCHASED
+        }
+      }
+
+      // Handle other database errors
+      if (error.code === '23503') {
+        return {
+          success: false,
+          reason: CONSTANTS.RESPONSE_CODES.PRODUCT_NOT_FOUND
+        }
+      }
+
+      // Handle generic database connection errors
+      if (error.message.includes('Database connection failed') || error.message.includes('connection')) {
+        return {
+          success: false,
+          reason: CONSTANTS.RESPONSE_CODES.DATABASE_CONNECTION_FAILED
+        }
+      }
+
+      // For any other errors, return a generic failure
+      return {
+        success: false,
+        reason: error.message || 'Purchase failed due to an unexpected error'
+      }
     }
   }
 

@@ -175,7 +175,7 @@ class AuthService {
       if (error.name === 'TokenExpiredError' || error.name === 'JsonWebTokenError') {
         throw error
       } else {
-        const jwtError = new Error('Invalid token')
+        const jwtError = new Error('invalid token')
         jwtError.name = 'JsonWebTokenError'
         throw jwtError
       }

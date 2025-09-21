@@ -234,7 +234,7 @@ describe('Admin Routes - Flash Sale Management', () => {
     })
 
     it('should return 404 for non-existent flash sale', async () => {
-      const nonExistentSaleId = 'non-existent-sale-id'
+      const nonExistentSaleId = '12345678-1234-1234-8123-123456789012'
 
       const response = await request(app)
         .get(`/admin/flash-sale/${nonExistentSaleId}`)

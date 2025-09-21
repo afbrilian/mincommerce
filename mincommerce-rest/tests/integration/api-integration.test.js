@@ -217,7 +217,7 @@ describe('API Integration Tests', () => {
       expect(upcomingStatus.body.data.status).toBe(CONSTANTS.SALE_STATUS.UPCOMING)
       expect(upcomingStatus.body.data.timeUntilStart).toBeGreaterThan(0)
 
-      // Update to active
+      // Update to active (by setting start time in the past)
       const activeResponse = await request(app)
         .post('/admin/flash-sale')
         .set('Authorization', `Bearer ${adminToken}`)
@@ -225,8 +225,7 @@ describe('API Integration Tests', () => {
           saleId: upcomingResponse.body.data.saleId,
           productId: testProduct.product_id,
           startTime: new Date(Date.now() - 60000), // Started 1 minute ago
-          endTime: new Date(Date.now() + 7200000), // Ends in 2 hours
-          status: CONSTANTS.SALE_STATUS.ACTIVE
+          endTime: new Date(Date.now() + 7200000) // Ends in 2 hours
         })
         .expect(200)
 

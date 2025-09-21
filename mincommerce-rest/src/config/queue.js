@@ -47,7 +47,7 @@ const initializeQueue = async () => {
     await queueFactory.initializeProviders(queueConfig)
 
     // Register job processors
-    queueFactory.process('purchase-processing', require('../jobs/processPurchase'))
+    // Note: Job processing is now handled by WorkerManager and PurchaseWorker
 
     logger.info(`Queue system initialized with provider: ${queueConfig.default}`)
     return queueFactory
@@ -64,16 +64,7 @@ const getQueueFactory = () => {
   return queueFactory
 }
 
-const addPurchaseJob = async purchaseData => {
-  const factory = getQueueFactory()
-  const job = await factory.addJob('purchase-processing', purchaseData, {
-    priority: 1, // Higher priority for purchase jobs
-    delay: 0 // Process immediately
-  })
-
-  logger.info(`Purchase job added: ${job.id} via ${job.provider}`)
-  return job
-}
+// Note: addPurchaseJob function removed - job queuing is now handled by PurchaseQueueService
 
 const getJob = async jobId => {
   const factory = getQueueFactory()
@@ -101,7 +92,6 @@ const closeQueue = async () => {
 module.exports = {
   initializeQueue,
   getQueueFactory,
-  addPurchaseJob,
   getJob,
   getJobStatus,
   getQueueStats,

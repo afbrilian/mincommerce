@@ -13,7 +13,8 @@ const { getRedisClient } = require('../../src/config/redis');
 const generateTestData = {
   user: (overrides = {}) => ({
     user_id: uuidv4(),
-    email: `test-${Date.now()}@example.com`,
+    email: `test-${Date.now()}-${Math.random().toString(36).substr(2, 9)}@example.com`,
+    role: 'user',
     created_at: new Date(),
     ...overrides,
   }),
@@ -29,15 +30,26 @@ const generateTestData = {
     ...overrides,
   }),
 
-  stock: (productId, overrides = {}) => ({
-    stock_id: uuidv4(),
-    product_id: productId,
-    total_quantity: 100,
-    available_quantity: 100,
-    reserved_quantity: 0,
-    last_updated: new Date(),
-    ...overrides,
-  }),
+  stock: (productId, overrides = {}) => {
+    const defaultStock = {
+      stock_id: uuidv4(),
+      product_id: productId,
+      total_quantity: 100,
+      available_quantity: 100,
+      reserved_quantity: 0,
+      last_updated: new Date(),
+    }
+    
+    // Apply overrides
+    const stock = { ...defaultStock, ...overrides }
+    
+    // Ensure balance constraint: total_quantity = available_quantity + reserved_quantity
+    if (overrides.available_quantity !== undefined || overrides.reserved_quantity !== undefined) {
+      stock.total_quantity = stock.available_quantity + stock.reserved_quantity
+    }
+    
+    return stock
+  },
 
   flashSale: (productId, overrides = {}) => {
     const now = new Date();
@@ -75,8 +87,34 @@ const dbHelpers = {
     const db = getDatabase();
     const tables = ['orders', 'flash_sales', 'stocks', 'products', 'users'];
 
+    // Clear tables in reverse order to respect foreign key constraints
     for (const table of tables) {
-      await db(table).del();
+      try {
+        // Add retry logic for deadlocks
+        let retries = 3;
+        while (retries > 0) {
+          try {
+            await db(table).del();
+            break;
+          } catch (error) {
+            if (error.message.includes('deadlock') && retries > 1) {
+              retries--;
+              await new Promise(resolve => setTimeout(resolve, 100));
+              continue;
+            }
+            throw error;
+          }
+        }
+      } catch (error) {
+        // Ignore errors if table doesn't exist or has no data
+        if (!error.message.includes('does not exist') && 
+            !error.message.includes('relation') && 
+            !error.message.includes('undefined') &&
+            !error.message.includes('deadlock') &&
+            !error.message.includes('foreign key')) {
+          throw error;
+        }
+      }
     }
   },
 

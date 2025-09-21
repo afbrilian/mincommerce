@@ -1,5 +1,4 @@
 const BaseRepository = require('./BaseRepository')
-const FlashSale = require('../models/FlashSale')
 const logger = require('../utils/logger')
 
 class FlashSaleRepository extends BaseRepository {
@@ -10,7 +9,7 @@ class FlashSaleRepository extends BaseRepository {
   async findById(saleId) {
     try {
       const result = await this.db(this.tableName).where('sale_id', saleId).first()
-      return result ? FlashSale.fromDatabase(result) : null
+      return result || null
     } catch (error) {
       logger.error(`Error finding flash sale by id ${saleId}:`, error)
       throw error
@@ -23,7 +22,7 @@ class FlashSaleRepository extends BaseRepository {
         .where('product_id', productId)
         .orderBy('created_at', 'desc')
         .first()
-      return result ? FlashSale.fromDatabase(result) : null
+      return result || null
     } catch (error) {
       logger.error(`Error finding flash sale by product id ${productId}:`, error)
       throw error
@@ -37,7 +36,7 @@ class FlashSaleRepository extends BaseRepository {
         .where('status', 'active')
         .where('start_time', '<=', now)
         .where('end_time', '>=', now)
-      return results.map(sale => FlashSale.fromDatabase(sale))
+      return results
     } catch (error) {
       logger.error('Error finding active flash sales:', error)
       throw error
@@ -50,7 +49,7 @@ class FlashSaleRepository extends BaseRepository {
       const results = await this.db(this.tableName)
         .where('status', 'upcoming')
         .where('start_time', '>', now)
-      return results.map(sale => FlashSale.fromDatabase(sale))
+      return results
     } catch (error) {
       logger.error('Error finding upcoming flash sales:', error)
       throw error
@@ -60,7 +59,7 @@ class FlashSaleRepository extends BaseRepository {
   async create(saleData) {
     try {
       const results = await this.db(this.tableName).insert(saleData).returning('*')
-      return FlashSale.fromDatabase(results[0])
+      return results[0]
     } catch (error) {
       logger.error('Error creating flash sale:', error)
       throw error
@@ -76,7 +75,7 @@ class FlashSaleRepository extends BaseRepository {
           updated_at: this.db.fn.now()
         })
         .returning('*')
-      return results[0] ? FlashSale.fromDatabase(results[0]) : null
+      return results[0] || null
     } catch (error) {
       logger.error(`Error updating flash sale status ${saleId}:`, error)
       throw error
@@ -118,6 +117,7 @@ class FlashSaleRepository extends BaseRepository {
         .select(
           'flash_sales.*',
           'products.name as product_name',
+          'products.description as product_description',
           'products.price',
           'products.image_url',
           'stocks.available_quantity',
@@ -150,7 +150,7 @@ class FlashSaleRepository extends BaseRepository {
         return null
       }
 
-      return FlashSale.fromDatabase(results[0])
+      return results[0]
     } catch (error) {
       logger.error(`Error updating flash sale ${saleId}:`, error)
       throw error

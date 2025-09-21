@@ -128,7 +128,7 @@ describe('AuthService - Authentication Management', () => {
     it('should reject invalid JWT token', async () => {
       const invalidToken = 'invalid.jwt.token'
 
-      expect(() => authService.verifyToken(invalidToken)).toThrow('Invalid token')
+      expect(() => authService.verifyToken(invalidToken)).toThrow('invalid token')
     })
   })
 
@@ -190,7 +190,7 @@ describe('AuthService - Authentication Management', () => {
     it('should reject invalid user JWT token', async () => {
       const invalidToken = 'invalid.jwt.token'
 
-      expect(() => authService.verifyToken(invalidToken)).toThrow('Invalid token')
+      expect(() => authService.verifyToken(invalidToken)).toThrow('invalid token')
     })
   })
 
@@ -225,7 +225,7 @@ describe('AuthService - Authentication Management', () => {
       // Wait for token to expire
       await new Promise(resolve => setTimeout(resolve, 10))
 
-      expect(() => authService.verifyToken(shortExpiryToken)).toThrow('Token expired')
+      expect(() => authService.verifyToken(shortExpiryToken)).toThrow('jwt expired')
     })
 
     it('should handle malformed tokens', async () => {
@@ -238,7 +238,7 @@ describe('AuthService - Authentication Management', () => {
       ]
 
       malformedTokens.forEach(token => {
-        expect(() => authService.verifyToken(token)).toThrow('Invalid token')
+        expect(() => authService.verifyToken(token)).toThrow('invalid token')
       })
     })
   })
@@ -260,7 +260,7 @@ describe('AuthService - Authentication Management', () => {
       ]
 
       malformedTokens.forEach(token => {
-        expect(() => authService.verifyToken(token)).toThrow('Invalid token')
+        expect(() => authService.verifyToken(token)).toThrow('invalid token')
       })
     })
   })

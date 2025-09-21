@@ -1,5 +1,4 @@
 const BaseRepository = require('./BaseRepository')
-const Stock = require('../models/Stock')
 const logger = require('../utils/logger')
 
 class StockRepository extends BaseRepository {
@@ -10,7 +9,7 @@ class StockRepository extends BaseRepository {
   async findByProductId(productId) {
     try {
       const result = await this.db(this.tableName).where('product_id', productId).first()
-      return result ? Stock.fromDatabase(result) : null
+      return result || null
     } catch (error) {
       logger.error(`Error finding stock by product id ${productId}:`, error)
       throw error
@@ -20,7 +19,7 @@ class StockRepository extends BaseRepository {
   async create(stockData) {
     try {
       const results = await this.db(this.tableName).insert(stockData).returning('*')
-      return Stock.fromDatabase(results[0])
+      return results[0]
     } catch (error) {
       logger.error('Error creating stock:', error)
       throw error
@@ -39,7 +38,7 @@ class StockRepository extends BaseRepository {
         .update('last_updated', this.db.fn.now())
         .returning('*')
       
-      return result && result.length > 0 ? Stock.fromDatabase(result[0]) : null
+      return result && result.length > 0 ? result[0] : null
     } catch (error) {
       logger.error(`Error updating available quantity for product ${productId}:`, error)
       throw error
@@ -56,7 +55,7 @@ class StockRepository extends BaseRepository {
         .update('last_updated', this.db.fn.now())
         .returning('*')
         .first()
-      return result ? Stock.fromDatabase(result) : null
+      return result || null
     } catch (error) {
       logger.error(`Error reserving stock for product ${productId}:`, error)
       throw error
@@ -73,7 +72,7 @@ class StockRepository extends BaseRepository {
         .update('last_updated', this.db.fn.now())
         .returning('*')
         .first()
-      return result ? Stock.fromDatabase(result) : null
+      return result || null
     } catch (error) {
       logger.error(`Error releasing stock for product ${productId}:`, error)
       throw error
@@ -89,7 +88,7 @@ class StockRepository extends BaseRepository {
         .update('last_updated', this.db.fn.now())
         .returning('*')
         .first()
-      return result ? Stock.fromDatabase(result) : null
+      return result || null
     } catch (error) {
       logger.error(`Error confirming stock for product ${productId}:`, error)
       throw error

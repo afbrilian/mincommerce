@@ -63,7 +63,18 @@ beforeEach(async () => {
 
   // Re-seed data for each test to ensure isolation
   const db = getDatabase();
-  await db.seed.run();
+  try {
+    await db.seed.run();
+  } catch (error) {
+    // If seeding fails, try to clear and re-run migrations
+    if (error.message.includes('does not exist') || error.message.includes('relation')) {
+      logger.warn('Seeding failed, re-running migrations...', error.message);
+      await db.migrate.latest();
+      await db.seed.run();
+    } else {
+      throw error;
+    }
+  }
   
   // Wait a moment to ensure seeding is complete
   await new Promise(resolve => setTimeout(resolve, 100));

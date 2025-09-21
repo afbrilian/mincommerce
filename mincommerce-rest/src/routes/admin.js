@@ -129,7 +129,7 @@ router.get('/flash-sale/:saleId', async (req, res) => {
     const { saleId } = req.params
 
     // Validate UUID format
-    if (!CONSTANTS.UUID_REGEX.test(saleId)) {
+    if (!CONSTANTS.VALIDATION.UUID_REGEX.test(saleId)) {
       return res.status(400).json({
         success: false,
         error: 'Invalid sale ID format'
@@ -149,13 +149,16 @@ router.get('/flash-sale/:saleId', async (req, res) => {
     res.json({
       success: true,
       data: {
-        saleId: flashSale.saleId,
-        productId: flashSale.productId,
-        startTime: flashSale.startTime.toISOString(),
-        endTime: flashSale.endTime.toISOString(),
+        saleId: flashSale.sale_id,
+        productId: flashSale.product_id,
+        productName: flashSale.product_name,
+        productDescription: flashSale.product_description,
+        productPrice: parseFloat(flashSale.price),
+        startTime: flashSale.start_time.toISOString(),
+        endTime: flashSale.end_time.toISOString(),
         status: flashSale.status,
-        createdAt: flashSale.createdAt.toISOString(),
-        updatedAt: flashSale.updatedAt.toISOString()
+        createdAt: flashSale.created_at.toISOString(),
+        updatedAt: flashSale.updated_at.toISOString()
       }
     })
   } catch (error) {
@@ -176,7 +179,7 @@ router.get('/flash-sale/:saleId/stats', async (req, res) => {
     const { saleId } = req.params
 
     // Validate UUID format
-    if (!CONSTANTS.UUID_REGEX.test(saleId)) {
+    if (!CONSTANTS.VALIDATION.UUID_REGEX.test(saleId)) {
       return res.status(400).json({
         success: false,
         error: 'Invalid sale ID format'
