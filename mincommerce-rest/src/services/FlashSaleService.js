@@ -162,12 +162,12 @@ class FlashSaleService {
       const orderStats = await this.getOrderStatistics(saleId)
 
       // Get stock information
-      const stock = await this.stockRepository.findByProductId(sale.productId)
+      const stock = await this.stockRepository.findByProductId(sale.product_id)
 
       return {
-        saleId: sale.saleId,
-        startTime: sale.startTime,
-        endTime: sale.endTime,
+        saleId: sale.sale_id,
+        startTime: sale.start_time,
+        endTime: sale.end_time,
         status: sale.status,
         totalOrders: orderStats.total || 0,
         confirmedOrders: orderStats.confirmed || 0,
@@ -198,7 +198,7 @@ class FlashSaleService {
       }
 
       const results = await db('orders')
-        .where('product_id', sale.productId)
+        .where('product_id', sale.product_id)
         .select('status')
         .count('* as count')
         .groupBy('status')

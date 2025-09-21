@@ -3,6 +3,7 @@ const PurchaseService = require('../services/PurchaseService')
 const PurchaseQueueService = require('../services/PurchaseQueueService')
 const AuthService = require('../services/AuthService')
 const logger = require('../utils/logger')
+const CONSTANTS = require('../constants')
 
 const router = express.Router()
 
@@ -165,7 +166,7 @@ router.get('/user/:userId', async (req, res) => {
   try {
     const { userId } = req.params
 
-    if (!userId.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
+    if (!CONSTANTS.UUID_REGEX.test(userId)) {
       return res.status(400).json({
         success: false,
         error: 'Invalid user ID format'

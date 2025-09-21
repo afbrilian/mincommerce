@@ -176,7 +176,7 @@ module.exports = {
   // Validation rules
   VALIDATION: {
     EMAIL_REGEX: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
-    UUID_REGEX: /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i,
+    UUID_REGEX: /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
     MIN_PASSWORD_LENGTH: 8,
     MAX_NAME_LENGTH: 255,
     MAX_DESCRIPTION_LENGTH: 1000,

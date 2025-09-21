@@ -10,8 +10,9 @@ const router = express.Router()
 const AuthService = require('../services/AuthService')
 const FlashSaleService = require('../services/FlashSaleService')
 
-// Import middleware
+// Import middleware and constants
 const logger = require('../utils/logger')
+const CONSTANTS = require('../constants')
 
 /**
  * Authentication middleware for admin routes
@@ -127,6 +128,14 @@ router.get('/flash-sale/:saleId', async (req, res) => {
   try {
     const { saleId } = req.params
 
+    // Validate UUID format
+    if (!CONSTANTS.UUID_REGEX.test(saleId)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid sale ID format'
+      })
+    }
+
     const flashSaleService = new FlashSaleService()
     const flashSale = await flashSaleService.getFlashSaleById(saleId)
 
@@ -165,6 +174,14 @@ router.get('/flash-sale/:saleId', async (req, res) => {
 router.get('/flash-sale/:saleId/stats', async (req, res) => {
   try {
     const { saleId } = req.params
+
+    // Validate UUID format
+    if (!CONSTANTS.UUID_REGEX.test(saleId)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid sale ID format'
+      })
+    }
 
     const flashSaleService = new FlashSaleService()
     const stats = await flashSaleService.getFlashSaleStats(saleId)
