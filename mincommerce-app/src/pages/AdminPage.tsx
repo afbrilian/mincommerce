@@ -243,13 +243,13 @@ const AdminPage: React.FC = () => {
                     <div>
                       <p className="text-sm text-gray-500">Product</p>
                       <p className="font-medium" data-testid={TEST_IDS.PRODUCT_NAME}>
-                        Limited Edition Gaming Console
+                        {flashSale.productName}
                       </p>
                     </div>
                     <div>
                       <p className="text-sm text-gray-500">Price</p>
                       <p className="font-medium" data-testid={TEST_IDS.PRODUCT_PRICE}>
-                        $599.99
+                        ${flashSale.productPrice}
                       </p>
                     </div>
                     <div>
