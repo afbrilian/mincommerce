@@ -134,7 +134,7 @@ const dbHelpers = {
   async findUserByEmail(email) {
     const UserRepository = require('../../src/repositories/UserRepository');
     const userRepo = new UserRepository();
-    return await userRepo.findByEmail(email);
+    return userRepo.findByEmail(email);
   },
 
   /**
@@ -142,7 +142,7 @@ const dbHelpers = {
    */
   async getUsers() {
     const db = getDatabase();
-    return await db('users').select('*');
+    return db('users').select('*');
   },
 
   /**
@@ -206,11 +206,12 @@ const dbHelpers = {
     const db = getDatabase();
     const sale = generateTestData.flashSale(productId, saleData);
     
-    console.log('createFlashSale - creating flash sale with data:', {
-      productId,
-      saleData,
-      finalSale: sale
-    });
+    // Debug logging for flash sale creation
+    // console.log('createFlashSale - creating flash sale with data:', {
+    //   productId,
+    //   saleData,
+    //   finalSale: sale
+    // });
     
     await db('flash_sales').insert(sale);
     return sale;
@@ -231,7 +232,7 @@ const dbHelpers = {
    */
   async getUserById(userId) {
     const db = getDatabase();
-    return await db('users').where('user_id', userId).first();
+    return db('users').where('user_id', userId).first();
   },
 
   /**
@@ -239,7 +240,7 @@ const dbHelpers = {
    */
   async getProductById(productId) {
     const db = getDatabase();
-    return await db('products').where('product_id', productId).first();
+    return db('products').where('product_id', productId).first();
   },
 
   /**
@@ -247,7 +248,7 @@ const dbHelpers = {
    */
   async getStockByProductId(productId) {
     const db = getDatabase();
-    return await db('stocks').where('product_id', productId).first();
+    return db('stocks').where('product_id', productId).first();
   },
 
   /**
@@ -255,7 +256,7 @@ const dbHelpers = {
    */
   async getFlashSaleById(saleId) {
     const db = getDatabase();
-    return await db('flash_sales').where('sale_id', saleId).first();
+    return db('flash_sales').where('sale_id', saleId).first();
   },
 
   /**
@@ -263,7 +264,7 @@ const dbHelpers = {
    */
   async getOrderByUserAndProduct(userId, productId) {
     const db = getDatabase();
-    return await db('orders').where('user_id', userId).where('product_id', productId).first();
+    return db('orders').where('user_id', userId).where('product_id', productId).first();
   },
 };
 

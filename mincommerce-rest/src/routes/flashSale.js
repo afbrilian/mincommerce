@@ -6,8 +6,41 @@ const router = express.Router()
 const flashSaleService = new FlashSaleService()
 
 /**
- * GET /flash-sale/status
- * Get current flash sale status
+ * @swagger
+ * /flash-sale/status:
+ *   get:
+ *     summary: Get flash sale status
+ *     description: Retrieve the current flash sale status including product information, availability, and timing
+ *     tags: [Flash Sale]
+ *     responses:
+ *       200:
+ *         description: Flash sale status retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/Success'
+ *                 - type: object
+ *                   properties:
+ *                     data:
+ *                       $ref: '#/components/schemas/FlashSaleStatus'
+ *       404:
+ *         description: No flash sale found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/Error'
+ *                 - type: object
+ *                   properties:
+ *                     data:
+ *                       type: null
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  */
 router.get('/status', async (req, res) => {
   try {

@@ -74,14 +74,14 @@ class BullQueueProvider extends QueueInterface {
     };
   }
 
-  process(type, processor) {
+  process(type, concurrency, processor) {
     const queue = this.queues.get(type);
     if (!queue) {
       throw new Error(`Queue ${type} not found`);
     }
 
-    queue.process('process', processor);
-    logger.info(`Bull processor registered for queue ${type}`);
+    queue.process(concurrency, processor);
+    logger.info(`Bull processor registered for queue ${type} with concurrency ${concurrency}`);
   }
 
   async getJob(jobId) {

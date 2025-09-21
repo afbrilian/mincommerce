@@ -56,8 +56,83 @@ const authenticateAdmin = async (req, res, next) => {
 router.use(authenticateAdmin)
 
 /**
- * POST /admin/flash-sale
- * Create or update a flash sale
+ * @swagger
+ * /admin/flash-sale:
+ *   post:
+ *     summary: Create or update flash sale
+ *     description: Create a new flash sale or update an existing one. If saleId is provided, it will update the existing sale.
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               saleId:
+ *                 type: string
+ *                 format: uuid
+ *                 example: 123e4567-e89b-12d3-a456-426614174000
+ *                 description: Sale ID for updates (optional for new sales)
+ *               productId:
+ *                 type: string
+ *                 format: uuid
+ *                 example: 123e4567-e89b-12d3-a456-426614174000
+ *                 description: Product ID for the flash sale
+ *               startTime:
+ *                 type: string
+ *                 format: date-time
+ *                 example: 2023-01-01T10:00:00.000Z
+ *                 description: Flash sale start time
+ *               endTime:
+ *                 type: string
+ *                 format: date-time
+ *                 example: 2023-01-01T12:00:00.000Z
+ *                 description: Flash sale end time
+ *     responses:
+ *       200:
+ *         description: Flash sale created or updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/Success'
+ *                 - type: object
+ *                   properties:
+ *                     data:
+ *                       $ref: '#/components/schemas/FlashSale'
+ *       400:
+ *         description: Bad request - validation error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       401:
+ *         description: Authentication required
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       403:
+ *         description: Admin access required
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       404:
+ *         description: Product not found or has no stock
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  */
 router.post('/flash-sale', async (req, res) => {
   try {
@@ -121,8 +196,78 @@ router.post('/flash-sale', async (req, res) => {
 })
 
 /**
- * GET /admin/flash-sale/:saleId
- * Get flash sale details by ID
+ * @swagger
+ * /admin/flash-sale/{saleId}:
+ *   get:
+ *     summary: Get flash sale details
+ *     description: Retrieve detailed information about a specific flash sale including product and stock information
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: saleId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         example: 123e4567-e89b-12d3-a456-426614174000
+ *         description: Flash sale ID
+ *     responses:
+ *       200:
+ *         description: Flash sale details retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/Success'
+ *                 - type: object
+ *                   properties:
+ *                     data:
+ *                       allOf:
+ *                         - $ref: '#/components/schemas/FlashSale'
+ *                         - type: object
+ *                           properties:
+ *                             productName:
+ *                               type: string
+ *                               example: Limited Edition Gaming Console
+ *                             productDescription:
+ *                               type: string
+ *                               example: The most advanced gaming console with exclusive features
+ *                             productPrice:
+ *                               type: number
+ *                               format: float
+ *                               example: 599.99
+ *       400:
+ *         description: Bad request - invalid UUID format
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       401:
+ *         description: Authentication required
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       403:
+ *         description: Admin access required
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       404:
+ *         description: Flash sale not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  */
 router.get('/flash-sale/:saleId', async (req, res) => {
   try {
@@ -171,8 +316,65 @@ router.get('/flash-sale/:saleId', async (req, res) => {
 })
 
 /**
- * GET /admin/flash-sale/:saleId/stats
- * Get flash sale statistics
+ * @swagger
+ * /admin/flash-sale/{saleId}/stats:
+ *   get:
+ *     summary: Get flash sale statistics
+ *     description: Retrieve comprehensive statistics for a specific flash sale including order counts, stock levels, and performance metrics
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: saleId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         example: 123e4567-e89b-12d3-a456-426614174000
+ *         description: Flash sale ID
+ *     responses:
+ *       200:
+ *         description: Flash sale statistics retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/Success'
+ *                 - type: object
+ *                   properties:
+ *                     data:
+ *                       $ref: '#/components/schemas/FlashSaleStats'
+ *       400:
+ *         description: Bad request - invalid UUID format
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       401:
+ *         description: Authentication required
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       403:
+ *         description: Admin access required
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       404:
+ *         description: Flash sale not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  */
 router.get('/flash-sale/:saleId/stats', async (req, res) => {
   try {

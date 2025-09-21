@@ -26,6 +26,7 @@ const { connectDatabase } = require('./config/database')
 const { connectRedis } = require('./config/redis')
 const { initializeQueue } = require('./config/queue')
 const WorkerManager = require('./workers/WorkerManager')
+const { swaggerUi, specs, serve, setup } = require('./config/swagger')
 
 const app = express()
 const PORT = process.env.PORT || 3001
@@ -66,6 +67,9 @@ app.use((req, res, next) => {
 
 // Health check route (no auth required)
 app.use('/health', healthRoutes)
+
+// Swagger API documentation
+app.use('/api-docs', serve, setup)
 
 // API routes
 app.use('/auth', authRoutes)

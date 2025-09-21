@@ -27,8 +27,39 @@ const getPurchaseQueueService = () => {
 }
 
 /**
- * POST /purchase
- * Queue a purchase request for processing
+ * @swagger
+ * /purchase:
+ *   post:
+ *     summary: Queue purchase request
+ *     description: Queue a purchase request for asynchronous processing. Returns immediately with job information.
+ *     tags: [Purchase]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       202:
+ *         description: Purchase request queued successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/QueuePurchaseResponse'
+ *       401:
+ *         description: Authentication required
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       409:
+ *         description: User already has a pending purchase request
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  */
 router.post('/', authService.authenticateMiddleware.bind(authService), async (req, res) => {
   try {
@@ -76,8 +107,33 @@ router.post('/', authService.authenticateMiddleware.bind(authService), async (re
 })
 
 /**
- * GET /purchase/status
- * Check user's purchase status (both queue and completed purchases)
+ * @swagger
+ * /purchase/status:
+ *   get:
+ *     summary: Get purchase status
+ *     description: Check the user's purchase status, including queued, processing, and completed purchases
+ *     tags: [Purchase]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Purchase status retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/PurchaseStatus'
+ *       401:
+ *         description: Authentication required
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  */
 router.get('/status', authService.authenticateMiddleware.bind(authService), async (req, res) => {
   try {

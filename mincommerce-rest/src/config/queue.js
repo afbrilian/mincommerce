@@ -16,29 +16,9 @@ const initializeQueue = async () => {
             password: process.env.REDIS_PASSWORD || undefined,
             db: process.env.REDIS_DB || 0 // Use different Redis DB for tests
           }
-        },
-        // Only include other providers in production
-        ...(process.env.NODE_ENV !== 'test' && {
-          kafka: {
-            clientId: process.env.KAFKA_CLIENT_ID || 'mincommerce-api',
-            brokers: process.env.KAFKA_BROKERS
-              ? process.env.KAFKA_BROKERS.split(',')
-              : ['localhost:9092'],
-            ssl: process.env.KAFKA_SSL === 'true',
-            sasl: process.env.KAFKA_USERNAME
-              ? {
-                  mechanism: 'plain',
-                  username: process.env.KAFKA_USERNAME,
-                  password: process.env.KAFKA_PASSWORD
-                }
-              : undefined
-          },
-          sqs: {
-            region: process.env.AWS_REGION || 'us-east-1',
-            accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-            secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY
-          }
-        })
+        }
+        // Note: Kafka and SQS providers are not implemented yet
+        // They will be added in future phases when needed
       }
     }
 

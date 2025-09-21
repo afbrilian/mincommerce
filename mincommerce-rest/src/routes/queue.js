@@ -31,7 +31,32 @@ const getWorkerManager = () => {
   return workerManager
 }
 
-// Get queue statistics
+/**
+ * @swagger
+ * /queue/stats:
+ *   get:
+ *     summary: Get queue statistics
+ *     description: Retrieve comprehensive queue and worker statistics including job counts, worker status, and performance metrics
+ *     tags: [Queue]
+ *     responses:
+ *       200:
+ *         description: Queue statistics retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/Success'
+ *                 - type: object
+ *                   properties:
+ *                     data:
+ *                       $ref: '#/components/schemas/QueueStats'
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
 router.get('/stats', async (req, res) => {
   try {
     const manager = getWorkerManager()
@@ -131,7 +156,50 @@ router.get('/providers', async (req, res) => {
   }
 })
 
-// Health check for queue system
+/**
+ * @swagger
+ * /queue/health:
+ *   get:
+ *     summary: Get queue system health
+ *     description: Check the health status of the queue system including worker status and overall system health
+ *     tags: [Queue]
+ *     responses:
+ *       200:
+ *         description: Queue health status retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/Success'
+ *                 - type: object
+ *                   properties:
+ *                     data:
+ *                       type: object
+ *                       properties:
+ *                         status:
+ *                           type: string
+ *                           enum: [healthy, degraded, unhealthy]
+ *                           example: healthy
+ *                         isRunning:
+ *                           type: boolean
+ *                           example: true
+ *                         worker:
+ *                           type: object
+ *                           properties:
+ *                             isProcessing:
+ *                               type: boolean
+ *                               example: true
+ *                         timestamp:
+ *                           type: string
+ *                           format: date-time
+ *                           example: 2023-01-01T00:00:00.000Z
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
 router.get('/health', async (req, res) => {
   try {
     const manager = getWorkerManager()

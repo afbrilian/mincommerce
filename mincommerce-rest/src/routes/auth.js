@@ -14,8 +14,77 @@ const logger = require('../utils/logger')
 const { VALIDATION } = require('../constants')
 
 /**
- * POST /auth/login
- * Login endpoint for both admin and user authentication
+ * @swagger
+ * /auth/login:
+ *   post:
+ *     summary: User login
+ *     description: Authenticate user with email. Supports both admin and regular user login. If user doesn't exist, they will be automatically created as a regular user.
+ *     tags: [Authentication]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *                 example: user@example.com
+ *                 description: User email address
+ *     responses:
+ *       200:
+ *         description: Login successful
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/Success'
+ *                 - type: object
+ *                   properties:
+ *                     data:
+ *                       type: object
+ *                       properties:
+ *                         token:
+ *                           type: string
+ *                           example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+ *                         userType:
+ *                           type: string
+ *                           enum: [admin, user]
+ *                           example: user
+ *                         email:
+ *                           type: string
+ *                           example: user@example.com
+ *                         userId:
+ *                           type: string
+ *                           format: uuid
+ *                           example: 123e4567-e89b-12d3-a456-426614174000
+ *       400:
+ *         description: Bad request - missing or invalid email
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       401:
+ *         description: Authentication failed
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       403:
+ *         description: Admin access required
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  */
 router.post('/login', async (req, res) => {
   try {
@@ -92,8 +161,80 @@ router.post('/login', async (req, res) => {
 })
 
 /**
- * POST /auth/verify
- * Verify JWT token endpoint
+ * @swagger
+ * /auth/verify:
+ *   post:
+ *     summary: Verify JWT token
+ *     description: Verify the validity of a JWT token and return user information
+ *     tags: [Authentication]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - token
+ *             properties:
+ *               token:
+ *                 type: string
+ *                 example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+ *                 description: JWT token to verify
+ *     responses:
+ *       200:
+ *         description: Token is valid
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/Success'
+ *                 - type: object
+ *                   properties:
+ *                     data:
+ *                       type: object
+ *                       properties:
+ *                         valid:
+ *                           type: boolean
+ *                           example: true
+ *                         userType:
+ *                           type: string
+ *                           enum: [admin, user]
+ *                           example: user
+ *                         email:
+ *                           type: string
+ *                           example: user@example.com
+ *                         userId:
+ *                           type: string
+ *                           format: uuid
+ *                           example: 123e4567-e89b-12d3-a456-426614174000
+ *                         role:
+ *                           type: string
+ *                           enum: [admin, user]
+ *                           example: user
+ *       400:
+ *         description: Bad request - missing token
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       401:
+ *         description: Invalid or expired token
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/Error'
+ *                 - type: object
+ *                   properties:
+ *                     valid:
+ *                       type: boolean
+ *                       example: false
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  */
 router.post('/verify', async (req, res) => {
   try {

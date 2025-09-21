@@ -31,7 +31,7 @@ beforeAll(async () => {
 
   } catch (error) {
     logger.error('Global test setup failed:', error);
-    process.exit(1);
+    throw error;
   }
 });
 
@@ -49,7 +49,7 @@ afterAll(async () => {
     await closeDatabase();
   } catch (error) {
     logger.error('Global test teardown failed:', error);
-    process.exit(1);
+    throw error;
   }
 });
 

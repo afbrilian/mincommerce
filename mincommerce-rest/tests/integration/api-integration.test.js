@@ -145,7 +145,7 @@ describe('API Integration Tests', () => {
 
     it('should handle multiple users attempting purchase simultaneously', async () => {
       // Create flash sale
-      const flashSaleResponse = await request(app)
+      await request(app)
         .post('/admin/flash-sale')
         .set('Authorization', `Bearer ${adminToken}`)
         .send({
@@ -218,7 +218,7 @@ describe('API Integration Tests', () => {
       expect(upcomingStatus.body.data.timeUntilStart).toBeGreaterThan(0)
 
       // Update to active (by setting start time in the past)
-      const activeResponse = await request(app)
+      await request(app)
         .post('/admin/flash-sale')
         .set('Authorization', `Bearer ${adminToken}`)
         .send({
@@ -237,7 +237,7 @@ describe('API Integration Tests', () => {
       expect(activeStatus.body.data.status).toBe(CONSTANTS.SALE_STATUS.ACTIVE)
 
       // Update to ended
-      const endedResponse = await request(app)
+      await request(app)
         .post('/admin/flash-sale')
         .set('Authorization', `Bearer ${adminToken}`)
         .send({
