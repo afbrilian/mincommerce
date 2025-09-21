@@ -2,8 +2,16 @@ import React, { useState, useEffect, useCallback } from 'react'
 import { Clock, Package, Users, ShoppingCart } from 'lucide-react'
 import api from '../services/api'
 import { TEST_IDS } from '../constants'
+import {
+  calculateFlashSaleStatusFromRelative,
+  isBuyButtonEnabled,
+  getStatusColorClasses,
+  getStatusText,
+  type FlashSaleStatus
+} from '../utils/flashSaleUtils'
+import { FLASH_SALE_STATUS } from '../constants'
 
-interface FlashSaleStatus {
+interface FlashSaleStatusData {
   saleId: string
   status: 'upcoming' | 'active' | 'ended'
   productName: string
@@ -15,10 +23,14 @@ interface FlashSaleStatus {
 }
 
 const FlashSalePage: React.FC = () => {
-  const [flashSaleStatus, setFlashSaleStatus] = useState<FlashSaleStatus | null>(null)
+  const [flashSaleStatus, setFlashSaleStatus] = useState<FlashSaleStatusData | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [timeLeft, setTimeLeft] = useState<{ hours: number; minutes: number; seconds: number } | null>(null)
+  const [timeLeft, setTimeLeft] = useState<{
+    hours: number
+    minutes: number
+    seconds: number
+  } | null>(null)
 
   const fetchFlashSaleStatus = useCallback(async () => {
     try {
@@ -29,9 +41,10 @@ const FlashSalePage: React.FC = () => {
         setError('No flash sale available at the moment')
       }
     } catch (err: unknown) {
-      const errorMessage = err && typeof err === 'object' && 'response' in err 
-        ? (err as { response?: { data?: { error?: string } } }).response?.data?.error 
-        : 'Failed to load flash sale status'
+      const errorMessage =
+        err && typeof err === 'object' && 'response' in err
+          ? (err as { response?: { data?: { error?: string } } }).response?.data?.error
+          : 'Failed to load flash sale status'
       setError(errorMessage || 'Failed to load flash sale status')
     } finally {
       setIsLoading(false)
@@ -44,10 +57,14 @@ const FlashSalePage: React.FC = () => {
     const now = new Date().getTime()
     let targetTime: number
 
-    if (flashSaleStatus.status === 'upcoming') {
-      targetTime = now + (flashSaleStatus.timeUntilStart * 1000)
-    } else if (flashSaleStatus.status === 'active') {
-      targetTime = now + (flashSaleStatus.timeUntilEnd * 1000)
+    const currentStatus = calculateFlashSaleStatusFromRelative({
+      timeUntilStart: flashSaleStatus.timeUntilStart,
+      timeUntilEnd: flashSaleStatus.timeUntilEnd
+    })
+    if (currentStatus === 'upcoming') {
+      targetTime = now + flashSaleStatus.timeUntilStart * 1000
+    } else if (currentStatus === 'active') {
+      targetTime = now + flashSaleStatus.timeUntilEnd * 1000
     } else {
       setTimeLeft(null)
       return
@@ -89,6 +106,15 @@ const FlashSalePage: React.FC = () => {
     return () => clearInterval(interval)
   }, [flashSaleStatus, updateCountdown])
 
+  // Helper function to get current status
+  const getCurrentStatus = useCallback((): FlashSaleStatus => {
+    if (!flashSaleStatus) return FLASH_SALE_STATUS.UPCOMING
+    return calculateFlashSaleStatusFromRelative({
+      timeUntilStart: flashSaleStatus.timeUntilStart,
+      timeUntilEnd: flashSaleStatus.timeUntilEnd
+    })
+  }, [flashSaleStatus])
+
   const handlePurchase = async () => {
     try {
       const response = await api.purchase.queuePurchase()
@@ -97,28 +123,11 @@ const FlashSalePage: React.FC = () => {
         alert('Purchase request queued! Check your purchase status.')
       }
     } catch (err: unknown) {
-      const errorMessage = err && typeof err === 'object' && 'response' in err 
-        ? (err as { response?: { data?: { error?: string } } }).response?.data?.error 
-        : 'Purchase failed. Please try again.'
+      const errorMessage =
+        err && typeof err === 'object' && 'response' in err
+          ? (err as { response?: { data?: { error?: string } } }).response?.data?.error
+          : 'Purchase failed. Please try again.'
       alert(errorMessage || 'Purchase failed. Please try again.')
-    }
-  }
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'upcoming': return 'text-yellow-600 bg-yellow-100'
-      case 'active': return 'text-green-600 bg-green-100'
-      case 'ended': return 'text-red-600 bg-red-100'
-      default: return 'text-gray-600 bg-gray-100'
-    }
-  }
-
-  const getStatusText = (status: string) => {
-    switch (status) {
-      case 'upcoming': return 'Upcoming'
-      case 'active': return 'Active'
-      case 'ended': return 'Ended'
-      default: return 'Unknown'
     }
   }
 
@@ -139,7 +148,7 @@ const FlashSalePage: React.FC = () => {
         <div className="text-center">
           <div className="text-red-600 text-lg font-medium mb-4">Error</div>
           <p className="text-gray-600">{error}</p>
-          <button 
+          <button
             onClick={fetchFlashSaleStatus}
             className="mt-4 bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700"
           >
@@ -162,9 +171,7 @@ const FlashSalePage: React.FC = () => {
             </div>
             <div className="flex items-center space-x-4">
               <span className="text-sm text-gray-500">Welcome, User</span>
-              <button className="text-sm text-indigo-600 hover:text-indigo-500">
-                Logout
-              </button>
+              <button className="text-sm text-indigo-600 hover:text-indigo-500">Logout</button>
             </div>
           </div>
         </div>
@@ -179,18 +186,22 @@ const FlashSalePage: React.FC = () => {
               <div className="bg-white shadow rounded-lg p-6">
                 <div className="flex items-center justify-between mb-4">
                   <h2 className="text-xl font-semibold text-gray-900">Flash Sale Status</h2>
-                  <span className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(flashSaleStatus.status)}`}>
-                    {getStatusText(flashSaleStatus.status)}
+                  <span
+                    className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColorClasses(getCurrentStatus())}`}
+                  >
+                    {getStatusText(getCurrentStatus())}
                   </span>
                 </div>
 
                 {/* Countdown Timer */}
-                {timeLeft && flashSaleStatus.status !== 'ended' && (
+                {timeLeft && getCurrentStatus() !== FLASH_SALE_STATUS.ENDED && (
                   <div className="mb-6">
                     <div className="flex items-center mb-2">
                       <Clock className="h-5 w-5 text-gray-400 mr-2" />
                       <span className="text-sm font-medium text-gray-700">
-                        {flashSaleStatus.status === 'upcoming' ? 'Sale starts in:' : 'Sale ends in:'}
+                        {getCurrentStatus() === FLASH_SALE_STATUS.UPCOMING
+                          ? 'Sale starts in:'
+                          : 'Sale ends in:'}
                       </span>
                     </div>
                     <div className="flex space-x-4">
@@ -217,20 +228,18 @@ const FlashSalePage: React.FC = () => {
                   <Package className="h-6 w-6 text-gray-400 mr-2" />
                   <h3 className="text-lg font-medium text-gray-900">Product Information</h3>
                 </div>
-                
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
                     <h4 className="text-xl font-semibold text-gray-900 mb-2">
                       {flashSaleStatus.productName}
                     </h4>
-                    <p className="text-gray-600 mb-4">
-                      {flashSaleStatus.productDescription}
-                    </p>
+                    <p className="text-gray-600 mb-4">{flashSaleStatus.productDescription}</p>
                     <div className="text-3xl font-bold text-indigo-600">
                       ${flashSaleStatus.productPrice}
                     </div>
                   </div>
-                  
+
                   <div className="space-y-4">
                     <div className="flex items-center">
                       <Users className="h-5 w-5 text-gray-400 mr-2" />
@@ -239,8 +248,8 @@ const FlashSalePage: React.FC = () => {
                         {flashSaleStatus.availableQuantity}
                       </span>
                     </div>
-                    
-                    {flashSaleStatus.status === 'active' && flashSaleStatus.availableQuantity > 0 && (
+
+                    {isBuyButtonEnabled(getCurrentStatus(), flashSaleStatus.availableQuantity) && (
                       <button
                         onClick={handlePurchase}
                         className="w-full bg-indigo-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
@@ -248,24 +257,25 @@ const FlashSalePage: React.FC = () => {
                         Buy Now
                       </button>
                     )}
-                    
-                    {flashSaleStatus.status === 'upcoming' && (
+
+                    {getCurrentStatus() === FLASH_SALE_STATUS.UPCOMING && (
                       <div className="text-center py-4">
                         <p className="text-gray-600">Sale hasn't started yet</p>
                       </div>
                     )}
-                    
-                    {flashSaleStatus.status === 'ended' && (
+
+                    {getCurrentStatus() === FLASH_SALE_STATUS.ENDED && (
                       <div className="text-center py-4">
                         <p className="text-gray-600">Sale has ended</p>
                       </div>
                     )}
-                    
-                    {flashSaleStatus.status === 'active' && flashSaleStatus.availableQuantity === 0 && (
-                      <div className="text-center py-4">
-                        <p className="text-red-600 font-medium">Sold Out!</p>
-                      </div>
-                    )}
+
+                    {getCurrentStatus() === FLASH_SALE_STATUS.ACTIVE &&
+                      flashSaleStatus.availableQuantity === 0 && (
+                        <div className="text-center py-4">
+                          <p className="text-red-600 font-medium">Sold Out!</p>
+                        </div>
+                      )}
                   </div>
                 </div>
               </div>

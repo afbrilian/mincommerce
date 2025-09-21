@@ -43,7 +43,7 @@ module.exports = {
 
   // Redis cache keys
   REDIS_KEYS: {
-    USER_ORDER: (userId) => `user_order:${userId}`,
+    USER_ORDER: userId => `user_order:${userId}`,
     ORDER: orderId => `order:${orderId}`,
     FLASH_SALE_STATUS: (saleId = null) =>
       saleId ? `flash_sale_status_${saleId}` : 'flash_sale_status',

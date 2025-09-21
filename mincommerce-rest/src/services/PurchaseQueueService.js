@@ -48,7 +48,7 @@ class PurchaseQueueService {
 
       // Generate unique job ID
       const jobId = uuidv4()
-      
+
       // Create job data
       const jobData = {
         jobId,
@@ -140,11 +140,7 @@ class PurchaseQueueService {
         ...data
       }
 
-      await this.getRedis().setEx(
-        jobKey,
-        CONSTANTS.CACHE_TTL.PURCHASE_JOB,
-        JSON.stringify(jobData)
-      )
+      await this.getRedis().setEx(jobKey, CONSTANTS.CACHE_TTL.PURCHASE_JOB, JSON.stringify(jobData))
 
       // Update user status if job data contains userId
       if (data.userId) {
@@ -186,7 +182,7 @@ class PurchaseQueueService {
     try {
       const stats = await this.getQueue().getStats()
       const totalJobs = (stats.waiting || 0) + (stats.active || 0)
-      
+
       // Estimate 2 seconds per job (conservative estimate)
       return Math.max(0, totalJobs * 2)
     } catch (error) {

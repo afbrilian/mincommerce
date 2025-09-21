@@ -105,7 +105,7 @@ class FlashSaleService {
       })
 
       logger.info(`Flash sale created: ${flashSale.sale_id}`)
-      
+
       // Map snake_case to camelCase for API response
       return {
         saleId: flashSale.sale_id,
@@ -158,7 +158,7 @@ class FlashSaleService {
       await redis.del(`flash_sale_status_${saleId}`)
 
       logger.info(`Flash sale status updated: ${saleId} -> ${status}`)
-      
+
       // Map snake_case to camelCase for API response
       return {
         saleId: updatedSale.sale_id,
@@ -300,7 +300,7 @@ class FlashSaleService {
       await redis.del('flash_sale_status')
 
       logger.info(`Flash sale ${saleId} updated successfully`)
-      
+
       // Map snake_case to camelCase for API response
       return {
         saleId: updatedSale.sale_id,
@@ -316,7 +316,6 @@ class FlashSaleService {
       throw error
     }
   }
-
 
   /**
    * Get flash sale statistics (alias for getSaleStatistics)

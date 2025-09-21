@@ -20,7 +20,7 @@ describe('FlashSaleService - Flash Sale Management', () => {
     const db = require('../config/database').getDatabase()
     const products = await db('products').select('*')
     const flashSales = await db('flash_sales').select('*')
-    
+
     if (products.length > 0) {
       testProduct = products[0]
     }

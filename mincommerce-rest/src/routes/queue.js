@@ -8,7 +8,7 @@ const router = express.Router()
 let workerManager = null
 
 // Set worker manager instance
-const setWorkerManager = (manager) => {
+const setWorkerManager = manager => {
   workerManager = manager
 }
 
@@ -61,7 +61,7 @@ router.get('/stats', async (req, res) => {
   try {
     const manager = getWorkerManager()
     const systemStatus = await manager.getSystemStatus()
-    
+
     res.json({
       success: true,
       data: systemStatus,

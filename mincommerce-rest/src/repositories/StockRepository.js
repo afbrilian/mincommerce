@@ -37,7 +37,7 @@ class StockRepository extends BaseRepository {
         .increment('total_quantity', quantityChange) // Also decrease total to maintain balance
         .update('last_updated', this.db.fn.now())
         .returning('*')
-      
+
       return result && result.length > 0 ? result[0] : null
     } catch (error) {
       logger.error(`Error updating available quantity for product ${productId}:`, error)

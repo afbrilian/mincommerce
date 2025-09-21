@@ -31,7 +31,7 @@ const LoginPage: React.FC = () => {
 
     try {
       const response = await api.auth.login(data.email)
-      
+
       if (response.success) {
         // Use the login method from auth store to properly set authentication state
         login(response)
@@ -46,9 +46,10 @@ const LoginPage: React.FC = () => {
         setError('Invalid response from server')
       }
     } catch (err: unknown) {
-      const errorMessage = err && typeof err === 'object' && 'response' in err 
-        ? (err as { response?: { data?: { error?: string } } }).response?.data?.error 
-        : 'Login failed. Please try again.'
+      const errorMessage =
+        err && typeof err === 'object' && 'response' in err
+          ? (err as { response?: { data?: { error?: string } } }).response?.data?.error
+          : 'Login failed. Please try again.'
       setError(errorMessage || 'Login failed. Please try again.')
     } finally {
       setIsLoading(false)
@@ -59,9 +60,12 @@ const LoginPage: React.FC = () => {
     <div className="min-h-screen bg-white">
       {/* Background Pattern */}
       <div className="absolute inset-0 bg-gradient-to-br from-rose-50 via-white to-orange-50"></div>
-      <div className="absolute inset-0 opacity-40" style={{
-        backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23f97316' fill-opacity='0.03'%3E%3Ccircle cx='30' cy='30' r='2'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
-      }}></div>
+      <div
+        className="absolute inset-0 opacity-40"
+        style={{
+          backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23f97316' fill-opacity='0.03'%3E%3Ccircle cx='30' cy='30' r='2'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
+        }}
+      ></div>
 
       <div className="relative flex min-h-screen">
         {/* Left Side - Branding */}
@@ -71,8 +75,8 @@ const LoginPage: React.FC = () => {
             <div className="max-w-md">
               <h1 className="text-4xl font-bold mb-6">Welcome to MinCommerce</h1>
               <p className="text-xl text-white/90 mb-8 leading-relaxed">
-                Experience lightning-fast flash sales with our high-performance platform. 
-                Built for scale, designed for success.
+                Experience lightning-fast flash sales with our high-performance platform. Built for
+                scale, designed for success.
               </p>
               <div className="space-y-4">
                 <div className="flex items-center space-x-3">
@@ -138,9 +142,16 @@ const LoginPage: React.FC = () => {
                     />
                   </div>
                   {errors.email && (
-                    <p className="mt-2 text-sm text-red-600 flex items-center" data-testid={TEST_IDS.VALIDATION_ERROR}>
+                    <p
+                      className="mt-2 text-sm text-red-600 flex items-center"
+                      data-testid={TEST_IDS.VALIDATION_ERROR}
+                    >
                       <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                        <path
+                          fillRule="evenodd"
+                          d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
+                          clipRule="evenodd"
+                        />
                       </svg>
                       {errors.email.message}
                     </p>
@@ -151,8 +162,16 @@ const LoginPage: React.FC = () => {
                   <div className="rounded-xl bg-red-50 border border-red-200 p-4">
                     <div className="flex">
                       <div className="flex-shrink-0">
-                        <svg className="h-5 w-5 text-red-400" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                        <svg
+                          className="h-5 w-5 text-red-400"
+                          fill="currentColor"
+                          viewBox="0 0 20 20"
+                        >
+                          <path
+                            fillRule="evenodd"
+                            d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                            clipRule="evenodd"
+                          />
                         </svg>
                       </div>
                       <div className="ml-3">

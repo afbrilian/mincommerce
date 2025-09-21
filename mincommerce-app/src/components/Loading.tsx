@@ -15,7 +15,11 @@ const Loading: React.FC<LoadingProps> = ({ size = 'md', text = 'Loading...', cla
   }
 
   return (
-    <div className={`flex items-center justify-center space-x-2 ${className}`}>
+    <div
+      className={`flex items-center justify-center space-x-2 ${className}`}
+      role="status"
+      aria-label="Loading"
+    >
       <Loader2 className={`animate-spin text-primary-600 ${sizeClasses[size]}`} />
       {text && <span className="text-sm text-gray-600">{text}</span>}
     </div>

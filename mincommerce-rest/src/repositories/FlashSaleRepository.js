@@ -163,9 +163,7 @@ class FlashSaleRepository extends BaseRepository {
    */
   async getMostRecentSale() {
     try {
-      const results = await this.db(this.tableName)
-        .orderBy('created_at', 'desc')
-        .limit(1)
+      const results = await this.db(this.tableName).orderBy('created_at', 'desc').limit(1)
 
       if (results.length === 0) {
         return null
@@ -185,7 +183,7 @@ class FlashSaleRepository extends BaseRepository {
   async getCurrentActiveSale() {
     try {
       const now = new Date()
-      
+
       logger.info('getCurrentActiveSale - searching for active sales', {
         now: now.toISOString(),
         tableName: this.tableName
@@ -203,7 +201,7 @@ class FlashSaleRepository extends BaseRepository {
           product_id: sale.product_id
         }))
       })
-      
+
       const results = await this.db(this.tableName)
         .where('start_time', '<=', now)
         .where('end_time', '>=', now)

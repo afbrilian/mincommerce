@@ -156,18 +156,18 @@ describe('User Routes - Flash Sale Access', () => {
       const jobId = purchaseResponse.body.data.jobId
 
       // Check job status in Redis
-      const jobStatus = await redisHelpers.getRedisClient().get(
-        CONSTANTS.REDIS_KEYS.PURCHASE_JOB(jobId)
-      )
+      const jobStatus = await redisHelpers
+        .getRedisClient()
+        .get(CONSTANTS.REDIS_KEYS.PURCHASE_JOB(jobId))
 
       expect(jobStatus).toBeDefined()
       const parsedStatus = JSON.parse(jobStatus)
       expect(parsedStatus.status).toBe(CONSTANTS.PURCHASE_JOB_STATUS.QUEUED)
 
       // Check user purchase status
-      const userStatus = await redisHelpers.getRedisClient().get(
-        CONSTANTS.REDIS_KEYS.PURCHASE_STATUS(testUser.user_id)
-      )
+      const userStatus = await redisHelpers
+        .getRedisClient()
+        .get(CONSTANTS.REDIS_KEYS.PURCHASE_STATUS(testUser.user_id))
 
       expect(userStatus).toBeDefined()
       const parsedUserStatus = JSON.parse(userStatus)
@@ -177,10 +177,7 @@ describe('User Routes - Flash Sale Access', () => {
 
     it('should prevent duplicate purchase requests', async () => {
       // First purchase request
-      await request(app)
-        .post('/purchase')
-        .set('Authorization', `Bearer ${userToken}`)
-        .expect(202)
+      await request(app).post('/purchase').set('Authorization', `Bearer ${userToken}`).expect(202)
 
       // Second purchase request should fail
       const response = await request(app)
@@ -342,10 +339,7 @@ describe('User Routes - Flash Sale Access', () => {
 
       // Attempt concurrent purchases - all should be queued
       const purchasePromises = tokens.map(token =>
-        request(app)
-          .post('/purchase')
-          .set('Authorization', `Bearer ${token}`)
-          .expect(202)
+        request(app).post('/purchase').set('Authorization', `Bearer ${token}`).expect(202)
       )
 
       const responses = await Promise.all(purchasePromises)
@@ -398,9 +392,7 @@ describe('User Routes - Flash Sale Access', () => {
 
   describe('Queue Monitoring', () => {
     it('should return queue statistics', async () => {
-      const response = await request(app)
-        .get('/queue/stats')
-        .expect(200)
+      const response = await request(app).get('/queue/stats').expect(200)
 
       expect(response.body.success).toBe(true)
       expect(response.body.data).toBeDefined()
@@ -409,9 +401,7 @@ describe('User Routes - Flash Sale Access', () => {
     })
 
     it('should return queue health status', async () => {
-      const response = await request(app)
-        .get('/queue/health')
-        .expect(200)
+      const response = await request(app).get('/queue/health').expect(200)
 
       expect(response.body.status).toBe('healthy')
       expect(response.body.system).toBeDefined()

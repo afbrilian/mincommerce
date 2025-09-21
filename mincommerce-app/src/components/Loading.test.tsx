@@ -24,9 +24,13 @@ describe('Loading Component', () => {
 
   it('renders different sizes', () => {
     const { rerender } = render(<Loading size="sm" />)
-    expect(screen.getByRole('status')).toHaveClass('animate-spin')
+    const spinner = screen.getByRole('status')
+    const icon = spinner.querySelector('svg')
+    expect(icon).toHaveClass('animate-spin')
 
     rerender(<Loading size="lg" />)
-    expect(screen.getByRole('status')).toHaveClass('animate-spin')
+    const newSpinner = screen.getByRole('status')
+    const newIcon = newSpinner.querySelector('svg')
+    expect(newIcon).toHaveClass('animate-spin')
   })
 })

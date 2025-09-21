@@ -144,9 +144,7 @@ describe('PurchaseService - Core Business Rules', () => {
       )
 
       // Simulate concurrent purchase attempts
-      const purchasePromises = users.map(user =>
-        purchaseService.attemptPurchase(user.user_id)
-      )
+      const purchasePromises = users.map(user => purchaseService.attemptPurchase(user.user_id))
 
       const results = await Promise.all(purchasePromises)
 
@@ -172,9 +170,7 @@ describe('PurchaseService - Core Business Rules', () => {
       )
 
       // Simulate high load purchase attempts
-      const purchasePromises = users.map(user =>
-        purchaseService.attemptPurchase(user.user_id)
-      )
+      const purchasePromises = users.map(user => purchaseService.attemptPurchase(user.user_id))
 
       const results = await Promise.all(purchasePromises)
 
@@ -207,9 +203,7 @@ describe('PurchaseService - Core Business Rules', () => {
 
       // Simulate concurrent attempts
       const startTime = Date.now()
-      const purchasePromises = users.map(user =>
-        purchaseService.attemptPurchase(user.user_id)
-      )
+      const purchasePromises = users.map(user => purchaseService.attemptPurchase(user.user_id))
 
       const results = await Promise.all(purchasePromises)
       const endTime = Date.now()
@@ -246,9 +240,7 @@ describe('PurchaseService - Core Business Rules', () => {
       )
 
       // Simulate race conditions - multiple users trying to buy the same item
-      const allPromises = users.map(user =>
-        purchaseService.attemptPurchase(user.user_id)
-      )
+      const allPromises = users.map(user => purchaseService.attemptPurchase(user.user_id))
 
       const results = await Promise.all(allPromises)
 
@@ -259,7 +251,9 @@ describe('PurchaseService - Core Business Rules', () => {
 
     it('should gracefully handle database connection issues', async () => {
       // Mock database connection failure
-      const originalCreate = purchaseService.orderRepository.create.bind(purchaseService.orderRepository)
+      const originalCreate = purchaseService.orderRepository.create.bind(
+        purchaseService.orderRepository
+      )
 
       purchaseService.orderRepository.create = jest
         .fn()
@@ -306,9 +300,7 @@ describe('PurchaseService - Core Business Rules', () => {
       // Make multiple rapid attempts
       const attempts = []
       for (let i = 0; i < 15; i++) {
-        attempts.push(
-          purchaseService.attemptPurchase(testUser.user_id)
-        )
+        attempts.push(purchaseService.attemptPurchase(testUser.user_id))
       }
 
       const results = await Promise.all(attempts)
@@ -316,11 +308,13 @@ describe('PurchaseService - Core Business Rules', () => {
       // Since rate limiting is not implemented, all attempts should either succeed or fail for other reasons
       const successful = results.filter(r => r.success)
       const failed = results.filter(r => !r.success)
-      
+
       // At least some should succeed (first few attempts)
       expect(successful.length).toBeGreaterThan(0)
       // Some should fail due to already purchased (after first successful attempt)
-      const alreadyPurchased = failed.filter(r => r.reason === CONSTANTS.RESPONSE_CODES.ALREADY_PURCHASED)
+      const alreadyPurchased = failed.filter(
+        r => r.reason === CONSTANTS.RESPONSE_CODES.ALREADY_PURCHASED
+      )
       expect(alreadyPurchased.length).toBeGreaterThan(0)
     })
   })

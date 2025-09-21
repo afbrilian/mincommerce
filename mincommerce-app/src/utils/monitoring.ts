@@ -14,7 +14,7 @@ export const initMonitoring = () => {
 export const trackPerformance = (name: string, startTime: number) => {
   const duration = performance.now() - startTime
   console.log(`Performance: ${name} took ${duration}ms`)
-  
+
   if (import.meta.env.PROD) {
     // Sentry tracking would go here
     console.log(`Performance: ${name} took ${duration}ms`)

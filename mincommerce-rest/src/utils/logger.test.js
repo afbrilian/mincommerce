@@ -149,9 +149,9 @@ describe('Logger Utility', () => {
           })
         ]
       })
-      
+
       expect(testLogger.level).toBe(CONSTANTS.LOGGING.LEVELS.DEBUG)
-      
+
       // Restore original value
       if (originalLogLevel !== undefined) {
         process.env.LOG_LEVEL = originalLogLevel
@@ -185,9 +185,9 @@ describe('Logger Utility', () => {
           })
         ]
       })
-      
+
       expect(testLogger.level).toBe('info')
-      
+
       // Restore original value
       if (originalLogLevel !== undefined) {
         process.env.LOG_LEVEL = originalLogLevel

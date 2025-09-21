@@ -55,8 +55,8 @@ class PurchaseService {
       // Check if sale has started
       const now = new Date()
       if (now < new Date(recentSale.start_time)) {
-        logger.warn(`Flash sale has not started`, { 
-          userId, 
+        logger.warn(`Flash sale has not started`, {
+          userId,
           startTime: recentSale.start_time,
           now: now.toISOString()
         })
@@ -68,8 +68,8 @@ class PurchaseService {
 
       // Check if sale has ended
       if (now > new Date(recentSale.end_time)) {
-        logger.warn(`Flash sale has ended`, { 
-          userId, 
+        logger.warn(`Flash sale has ended`, {
+          userId,
           endTime: recentSale.end_time,
           now: now.toISOString()
         })
@@ -100,7 +100,7 @@ class PurchaseService {
 
       // Use PostgreSQL advisory lock for atomic inventory check and update
       const lockId = `inventory_${product.product_id}`.hashCode()
-      
+
       try {
         // Acquire advisory lock
         await this.stockRepository.acquireLock(lockId)
@@ -120,11 +120,11 @@ class PurchaseService {
           product.product_id,
           -1
         )
-        
+
         if (!updatedStock) {
-          logger.warn(`Failed to update stock - insufficient quantity`, { 
-            userId, 
-            productId: product.product_id 
+          logger.warn(`Failed to update stock - insufficient quantity`, {
+            userId,
+            productId: product.product_id
           })
           return {
             success: false,
@@ -144,15 +144,19 @@ class PurchaseService {
         const order = await this.orderRepository.create(orderData)
 
         // Cache user order in Redis
-        await redis.setEx(userOrderKey, 3600, JSON.stringify({
-          orderId: order.order_id,
-          productId: product.product_id,
-          status: 'confirmed',
-          purchasedAt: order.created_at
-        }))
+        await redis.setEx(
+          userOrderKey,
+          3600,
+          JSON.stringify({
+            orderId: order.order_id,
+            productId: product.product_id,
+            status: 'confirmed',
+            purchasedAt: order.created_at
+          })
+        )
 
-        logger.info(`Purchase successful`, { 
-          userId, 
+        logger.info(`Purchase successful`, {
+          userId,
           orderId: order.order_id,
           productId: product.product_id
         })
@@ -167,15 +171,13 @@ class PurchaseService {
             purchasedAt: order.created_at
           }
         }
-
       } finally {
         // Always release the lock
         await this.stockRepository.releaseLock(lockId)
       }
-
     } catch (error) {
       logger.error('Purchase attempt failed:', error)
-      
+
       if (error.message.includes('already purchased')) {
         return {
           success: false,
@@ -200,7 +202,10 @@ class PurchaseService {
       }
 
       // Handle generic database connection errors
-      if (error.message.includes('Database connection failed') || error.message.includes('connection')) {
+      if (
+        error.message.includes('Database connection failed') ||
+        error.message.includes('connection')
+      ) {
         return {
           success: false,
           reason: CONSTANTS.RESPONSE_CODES.DATABASE_CONNECTION_FAILED
@@ -237,7 +242,7 @@ class PurchaseService {
       if (cachedOrder) {
         const orderData = JSON.parse(cachedOrder)
         logger.info(`Purchase status found in cache`, { userId, orderId: orderData.orderId })
-        
+
         return {
           data: {
             hasPurchased: true,
@@ -251,20 +256,24 @@ class PurchaseService {
 
       // Check database for any orders
       const orders = await this.orderRepository.findByUserId(userId)
-      
+
       if (orders && orders.length > 0) {
         const order = orders[0] // Get the first order
-        
+
         // Cache the result
-        await redis.setex(userOrderKey, 3600, JSON.stringify({
-          orderId: order.order_id,
-          productId: order.product_id,
-          status: order.status,
-          purchasedAt: order.created_at
-        }))
+        await redis.setex(
+          userOrderKey,
+          3600,
+          JSON.stringify({
+            orderId: order.order_id,
+            productId: order.product_id,
+            status: order.status,
+            purchasedAt: order.created_at
+          })
+        )
 
         logger.info(`Purchase status found in database`, { userId, orderId: order.order_id })
-        
+
         return {
           data: {
             hasPurchased: true,
@@ -277,7 +286,7 @@ class PurchaseService {
       }
 
       logger.info(`No purchase found`, { userId })
-      
+
       return {
         data: {
           hasPurchased: false,
@@ -287,7 +296,6 @@ class PurchaseService {
           purchasedAt: null
         }
       }
-
     } catch (error) {
       logger.error('Failed to check purchase status:', error)
       throw error
@@ -302,7 +310,7 @@ class PurchaseService {
   async getUserOrders(userId) {
     try {
       const orders = await this.orderRepository.findByUserId(userId)
-      
+
       return {
         success: true,
         data: orders || []
@@ -315,11 +323,11 @@ class PurchaseService {
 }
 
 // Helper function to generate hash code for lock ID
-String.prototype.hashCode = function() {
+String.prototype.hashCode = function () {
   let hash = 0
   for (let i = 0; i < this.length; i++) {
     const char = this.charCodeAt(i)
-    hash = ((hash << 5) - hash) + char
+    hash = (hash << 5) - hash + char
     hash = hash & hash // Convert to 32-bit integer
   }
   return Math.abs(hash)

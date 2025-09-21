@@ -75,7 +75,7 @@ class PurchaseWorker {
     try {
       const { getRedisClient } = require('../config/redis')
       const redis = getRedisClient()
-      
+
       const jobKey = CONSTANTS.REDIS_KEYS.PURCHASE_JOB(jobId)
       const jobData = {
         jobId,
@@ -84,11 +84,7 @@ class PurchaseWorker {
         ...data
       }
 
-      await redis.setEx(
-        jobKey,
-        CONSTANTS.CACHE_TTL.PURCHASE_JOB,
-        JSON.stringify(jobData)
-      )
+      await redis.setEx(jobKey, CONSTANTS.CACHE_TTL.PURCHASE_JOB, JSON.stringify(jobData))
 
       // Update user status if job data contains userId
       if (data.userId) {
@@ -126,13 +122,15 @@ class PurchaseWorker {
       queue.process(
         CONSTANTS.QUEUE.JOB_TYPES.PURCHASE_PROCESSING,
         CONSTANTS.QUEUE.CONCURRENCY.PURCHASE_WORKERS,
-        async (job) => {
+        async job => {
           return this.processPurchaseJob(job)
         }
       )
 
       this.isProcessing = true
-      logger.info(`Purchase worker started with ${CONSTANTS.QUEUE.CONCURRENCY.PURCHASE_WORKERS} concurrent workers`)
+      logger.info(
+        `Purchase worker started with ${CONSTANTS.QUEUE.CONCURRENCY.PURCHASE_WORKERS} concurrent workers`
+      )
     } catch (error) {
       logger.error('Failed to start purchase worker:', error)
       throw error

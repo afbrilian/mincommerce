@@ -137,7 +137,7 @@ export const TEST_IDS = {
   EMAIL_INPUT: 'email-input',
   LOGIN_BUTTON: 'login-button',
   VALIDATION_ERROR: 'validation-error',
-  
+
   // Admin Page
   ADMIN_DASHBOARD: 'admin-dashboard',
   FLASH_SALE_MANAGEMENT: 'flash-sale-management',
@@ -162,7 +162,7 @@ export const TEST_IDS = {
   SUCCESS_MESSAGE: 'success-message',
   ERROR_MESSAGE: 'error-message',
   RETRY_BUTTON: 'retry-button',
-  
+
   // Flash Sale Page
   FLASH_SALE_INTERFACE: 'flash-sale-interface',
   PURCHASE_BUTTON: 'purchase-button',

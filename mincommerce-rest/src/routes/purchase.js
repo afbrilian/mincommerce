@@ -146,7 +146,7 @@ router.get('/status', authService.authenticateMiddleware.bind(authService), asyn
 
     // Check for queued purchase first
     const queueStatus = await getPurchaseQueueService().getUserPurchaseStatus(userId)
-    
+
     if (queueStatus) {
       // User has a queued or processing purchase
       return res.status(200).json({
@@ -180,39 +180,43 @@ router.get('/status', authService.authenticateMiddleware.bind(authService), asyn
  * GET /purchase/job/:jobId
  * Check purchase job status by job ID
  */
-router.get('/job/:jobId', authService.authenticateMiddleware.bind(authService), async (req, res) => {
-  try {
-    const { jobId } = req.params
-    const { userId } = req.user
+router.get(
+  '/job/:jobId',
+  authService.authenticateMiddleware.bind(authService),
+  async (req, res) => {
+    try {
+      const { jobId } = req.params
+      const { userId } = req.user
 
-    logger.info(`GET /purchase/job/${jobId}`, {
-      ip: req.ip,
-      userId,
-      jobId
-    })
+      logger.info(`GET /purchase/job/${jobId}`, {
+        ip: req.ip,
+        userId,
+        jobId
+      })
 
-    // Get job status
-    const jobStatus = await getPurchaseQueueService().getJobStatus(jobId)
-    
-    if (!jobStatus) {
-      return res.status(404).json({
+      // Get job status
+      const jobStatus = await getPurchaseQueueService().getJobStatus(jobId)
+
+      if (!jobStatus) {
+        return res.status(404).json({
+          success: false,
+          error: 'Job not found'
+        })
+      }
+
+      res.status(200).json({
+        success: true,
+        data: jobStatus
+      })
+    } catch (error) {
+      logger.error('Failed to get job status:', error)
+      res.status(500).json({
         success: false,
-        error: 'Job not found'
+        error: 'Failed to get job status'
       })
     }
-
-    res.status(200).json({
-      success: true,
-      data: jobStatus
-    })
-  } catch (error) {
-    logger.error('Failed to get job status:', error)
-    res.status(500).json({
-      success: false,
-      error: 'Failed to get job status'
-    })
   }
-})
+)
 
 /**
  * GET /purchase/user/:userId

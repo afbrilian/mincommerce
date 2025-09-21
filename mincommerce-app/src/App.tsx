@@ -12,15 +12,15 @@ const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       retry: 1,
-      refetchOnWindowFocus: false,
-    },
-  },
+      refetchOnWindowFocus: false
+    }
+  }
 })
 
 // Protected Route Component
-const ProtectedRoute: React.FC<{ children: React.ReactNode; requiredRole?: 'admin' | 'user' }> = ({ 
-  children, 
-  requiredRole 
+const ProtectedRoute: React.FC<{ children: React.ReactNode; requiredRole?: 'admin' | 'user' }> = ({
+  children,
+  requiredRole
 }) => {
   const { isAuthenticated, user } = useAuthStore()
 
@@ -60,25 +60,25 @@ function App() {
             <Routes>
               {/* Home Route - handles redirects based on authentication */}
               <Route path="/" element={<HomeRoute />} />
-              
+
               {/* Protected Routes */}
-              <Route 
-                path="/admin" 
+              <Route
+                path="/admin"
                 element={
                   <ProtectedRoute requiredRole="admin">
                     <AdminPage />
                   </ProtectedRoute>
-                } 
+                }
               />
-              <Route 
-                path="/flash-sale" 
+              <Route
+                path="/flash-sale"
                 element={
                   <ProtectedRoute requiredRole="user">
                     <FlashSalePage />
                   </ProtectedRoute>
-                } 
+                }
               />
-              
+
               {/* Catch all route */}
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>

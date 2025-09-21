@@ -100,7 +100,8 @@ class WorkerManager {
       })
 
       // Cleanup old jobs periodically
-      if (Math.random() < 0.1) { // 10% chance to cleanup
+      if (Math.random() < 0.1) {
+        // 10% chance to cleanup
         await this.purchaseQueueService.cleanupOldJobs(24) // Keep jobs for 24 hours
       }
     } catch (error) {
@@ -118,11 +119,7 @@ class WorkerManager {
       const redis = getRedisClient()
 
       const metricsKey = CONSTANTS.REDIS_KEYS.PURCHASE_METRICS
-      await redis.setEx(
-        metricsKey,
-        CONSTANTS.CACHE_TTL.PURCHASE_METRICS,
-        JSON.stringify(metrics)
-      )
+      await redis.setEx(metricsKey, CONSTANTS.CACHE_TTL.PURCHASE_METRICS, JSON.stringify(metrics))
     } catch (error) {
       logger.error('Failed to store metrics:', error)
     }

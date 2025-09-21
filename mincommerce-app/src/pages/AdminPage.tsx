@@ -1,16 +1,33 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
-import { Settings, LogOut, Clock, TrendingUp, Package, AlertCircle, CheckCircle, XCircle } from 'lucide-react'
+import {
+  Settings,
+  LogOut,
+  Clock,
+  TrendingUp,
+  Package,
+  AlertCircle,
+  CheckCircle,
+  XCircle
+} from 'lucide-react'
 import { useAuthStore } from '../store/authStore'
 import { api } from '../services/api'
 import { SEEDED_IDS, TEST_IDS } from '../constants'
+import {
+  calculateFlashSaleStatus,
+  calculateCountdown,
+  formatTime,
+  getStatusBadgeConfig,
+  type FlashSaleStatus
+} from '../utils/flashSaleUtils'
+import { FLASH_SALE_STATUS } from '../constants'
 import type { FlashSale, FlashSaleStats, FlashSaleFormData } from '../types'
 
 const AdminPage: React.FC = () => {
   const navigate = useNavigate()
   const { user, logout } = useAuthStore()
-  
+
   // State management
   const [flashSale, setFlashSale] = useState<FlashSale | null>(null)
   const [flashSaleStats, setFlashSaleStats] = useState<FlashSaleStats | null>(null)
@@ -48,7 +65,7 @@ const AdminPage: React.FC = () => {
     try {
       // Use the seeded flash sale ID
       const saleId = SEEDED_IDS.FLASH_SALE_ID
-      
+
       const [saleResponse, statsResponse] = await Promise.all([
         api.admin.getFlashSaleDetails(saleId).catch(() => null),
         api.admin.getFlashSaleStats(saleId).catch(() => null)
@@ -73,40 +90,20 @@ const AdminPage: React.FC = () => {
     }
   }, [setValue])
 
-  // Calculate countdown
-  const calculateCountdown = useCallback(() => {
-    if (!flashSale) return null
-
-    const now = new Date().getTime()
-    const startTime = new Date(flashSale.startTime).getTime()
-    const endTime = new Date(flashSale.endTime).getTime()
-
-    const timeUntilStart = Math.max(0, startTime - now)
-    const timeUntilEnd = Math.max(0, endTime - now)
-    const timeSinceStart = Math.max(0, now - startTime)
-    const timeSinceEnd = Math.max(0, now - endTime)
-
-    return {
-      timeUntilStart: Math.floor(timeUntilStart / 1000),
-      timeUntilEnd: Math.floor(timeUntilEnd / 1000),
-      timeSinceStart: Math.floor(timeSinceStart / 1000),
-      timeSinceEnd: Math.floor(timeSinceEnd / 1000)
-    }
-  }, [flashSale])
-
   // Update countdown every second
   useEffect(() => {
     if (!flashSale) return
 
     const updateCountdown = () => {
-      setCountdown(calculateCountdown())
+      const countdownData = calculateCountdown(flashSale.startTime, flashSale.endTime)
+      setCountdown(countdownData)
     }
 
     updateCountdown()
     const interval = setInterval(updateCountdown, 1000)
 
     return () => clearInterval(interval)
-  }, [flashSale, calculateCountdown])
+  }, [flashSale])
 
   // Load data on component mount
   useEffect(() => {
@@ -138,7 +135,7 @@ const AdminPage: React.FC = () => {
       }
 
       // Call API
-      const response = data.saleId 
+      const response = data.saleId
         ? await api.admin.updateFlashSale(submitData)
         : await api.admin.createFlashSale(submitData)
 
@@ -151,49 +148,32 @@ const AdminPage: React.FC = () => {
         throw new Error(response.error || 'Failed to save flash sale')
       }
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Something went wrong. Please try again.'
+      const errorMessage =
+        err instanceof Error ? err.message : 'Something went wrong. Please try again.'
       setError(errorMessage)
     } finally {
       setIsSaving(false)
     }
   }
 
+  // Get status badge component
+  const getStatusBadge = (status: FlashSaleStatus) => {
+    const config = getStatusBadgeConfig(status)
+    const IconComponent =
+      status === FLASH_SALE_STATUS.UPCOMING
+        ? Clock
+        : status === FLASH_SALE_STATUS.ACTIVE
+          ? CheckCircle
+          : XCircle
 
-  // Format time for display
-  const formatTime = (seconds: number) => {
-    const hours = Math.floor(seconds / 3600)
-    const minutes = Math.floor((seconds % 3600) / 60)
-    const secs = seconds % 60
-    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
-  }
-
-  // Get status badge
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'upcoming':
-        return (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-            <Clock className="w-3 h-3 mr-1" />
-            Upcoming
-          </span>
-        )
-      case 'active':
-        return (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-            <CheckCircle className="w-3 h-3 mr-1" />
-            Active
-          </span>
-        )
-      case 'ended':
-        return (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-            <XCircle className="w-3 h-3 mr-1" />
-            Ended
-          </span>
-        )
-      default:
-        return null
-    }
+    return (
+      <span
+        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${config.colorClasses}`}
+      >
+        <IconComponent className="w-3 h-3 mr-1" />
+        {config.text}
+      </span>
+    )
   }
 
   if (isLoading) {
@@ -219,7 +199,7 @@ const AdminPage: React.FC = () => {
             </div>
             <div className="flex items-center space-x-4">
               <span className="text-sm text-gray-500">Welcome, {user?.email}</span>
-              <button 
+              <button
                 onClick={handleLogout}
                 className="flex items-center text-sm text-indigo-600 hover:text-indigo-500"
               >
@@ -237,28 +217,40 @@ const AdminPage: React.FC = () => {
           {/* Flash Sale Management Section */}
           <div className="bg-white shadow rounded-lg" data-testid={TEST_IDS.ADMIN_DASHBOARD}>
             <div className="px-4 py-5 sm:p-6">
-              <h3 className="text-lg leading-6 font-medium text-gray-900 mb-6" data-testid={TEST_IDS.FLASH_SALE_MANAGEMENT}>
+              <h3
+                className="text-lg leading-6 font-medium text-gray-900 mb-6"
+                data-testid={TEST_IDS.FLASH_SALE_MANAGEMENT}
+              >
                 Flash Sale Management
               </h3>
 
               {/* Flash Sale Status */}
               {flashSale && (
-                <div className="mb-6 p-4 bg-gray-50 rounded-lg" data-testid={TEST_IDS.FLASH_SALE_STATUS}>
+                <div
+                  className="mb-6 p-4 bg-gray-50 rounded-lg"
+                  data-testid={TEST_IDS.FLASH_SALE_STATUS}
+                >
                   <div className="flex items-center justify-between mb-4">
                     <h4 className="text-md font-medium text-gray-900">Current Flash Sale Status</h4>
                     <div data-testid={TEST_IDS.STATUS_BADGE}>
-                      {getStatusBadge(flashSale.status)}
+                      {getStatusBadge(
+                        calculateFlashSaleStatus(flashSale.startTime, flashSale.endTime)
+                      )}
                     </div>
                   </div>
-                  
+
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                     <div>
                       <p className="text-sm text-gray-500">Product</p>
-                      <p className="font-medium" data-testid={TEST_IDS.PRODUCT_NAME}>Limited Edition Gaming Console</p>
+                      <p className="font-medium" data-testid={TEST_IDS.PRODUCT_NAME}>
+                        Limited Edition Gaming Console
+                      </p>
                     </div>
                     <div>
                       <p className="text-sm text-gray-500">Price</p>
-                      <p className="font-medium" data-testid={TEST_IDS.PRODUCT_PRICE}>$599.99</p>
+                      <p className="font-medium" data-testid={TEST_IDS.PRODUCT_PRICE}>
+                        $599.99
+                      </p>
                     </div>
                     <div>
                       <p className="text-sm text-gray-500">Available</p>
@@ -278,31 +270,43 @@ const AdminPage: React.FC = () => {
                   {countdown && (
                     <div className="mt-4 p-3 bg-white rounded border">
                       <div className="flex items-center space-x-6">
-                        {flashSale.status === 'upcoming' && (
+                        {calculateFlashSaleStatus(flashSale.startTime, flashSale.endTime) ===
+                          FLASH_SALE_STATUS.UPCOMING && (
                           <div>
                             <p className="text-sm text-gray-500">Time until start</p>
-                            <p className="text-lg font-mono" data-testid={TEST_IDS.TIME_UNTIL_START}>
+                            <p
+                              className="text-lg font-mono"
+                              data-testid={TEST_IDS.TIME_UNTIL_START}
+                            >
                               {formatTime(countdown.timeUntilStart)}
                             </p>
                           </div>
                         )}
-                        {flashSale.status === 'active' && (
+                        {calculateFlashSaleStatus(flashSale.startTime, flashSale.endTime) ===
+                          FLASH_SALE_STATUS.ACTIVE && (
                           <>
                             <div>
                               <p className="text-sm text-gray-500">Time since start</p>
-                              <p className="text-lg font-mono" data-testid={TEST_IDS.TIME_SINCE_START}>
+                              <p
+                                className="text-lg font-mono"
+                                data-testid={TEST_IDS.TIME_SINCE_START}
+                              >
                                 {formatTime(countdown.timeSinceStart)}
                               </p>
                             </div>
                             <div>
                               <p className="text-sm text-gray-500">Time until end</p>
-                              <p className="text-lg font-mono" data-testid={TEST_IDS.TIME_UNTIL_END}>
+                              <p
+                                className="text-lg font-mono"
+                                data-testid={TEST_IDS.TIME_UNTIL_END}
+                              >
                                 {formatTime(countdown.timeUntilEnd)}
                               </p>
                             </div>
                           </>
                         )}
-                        {flashSale.status === 'ended' && (
+                        {calculateFlashSaleStatus(flashSale.startTime, flashSale.endTime) ===
+                          FLASH_SALE_STATUS.ENDED && (
                           <div>
                             <p className="text-sm text-gray-500">Time since end</p>
                             <p className="text-lg font-mono" data-testid={TEST_IDS.TIME_SINCE_END}>
@@ -318,25 +322,37 @@ const AdminPage: React.FC = () => {
                   {flashSaleStats && (
                     <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-4">
                       <div className="text-center p-3 bg-blue-50 rounded">
-                        <p className="text-2xl font-bold text-blue-600" data-testid={TEST_IDS.TOTAL_ORDERS}>
+                        <p
+                          className="text-2xl font-bold text-blue-600"
+                          data-testid={TEST_IDS.TOTAL_ORDERS}
+                        >
                           {flashSaleStats.totalOrders}
                         </p>
                         <p className="text-sm text-gray-600">Total Orders</p>
                       </div>
                       <div className="text-center p-3 bg-green-50 rounded">
-                        <p className="text-2xl font-bold text-green-600" data-testid={TEST_IDS.CONFIRMED_ORDERS}>
+                        <p
+                          className="text-2xl font-bold text-green-600"
+                          data-testid={TEST_IDS.CONFIRMED_ORDERS}
+                        >
                           {flashSaleStats.confirmedOrders}
                         </p>
                         <p className="text-sm text-gray-600">Confirmed</p>
                       </div>
                       <div className="text-center p-3 bg-yellow-50 rounded">
-                        <p className="text-2xl font-bold text-yellow-600" data-testid={TEST_IDS.PENDING_ORDERS}>
+                        <p
+                          className="text-2xl font-bold text-yellow-600"
+                          data-testid={TEST_IDS.PENDING_ORDERS}
+                        >
                           {flashSaleStats.pendingOrders}
                         </p>
                         <p className="text-sm text-gray-600">Pending</p>
                       </div>
                       <div className="text-center p-3 bg-purple-50 rounded">
-                        <p className="text-2xl font-bold text-purple-600" data-testid={TEST_IDS.SOLD_QUANTITY}>
+                        <p
+                          className="text-2xl font-bold text-purple-600"
+                          data-testid={TEST_IDS.SOLD_QUANTITY}
+                        >
                           {flashSaleStats.soldQuantity || 0}
                         </p>
                         <p className="text-sm text-gray-600">Sold</p>
@@ -350,7 +366,10 @@ const AdminPage: React.FC = () => {
               <form onSubmit={handleSubmit(onSubmit)} data-testid={TEST_IDS.FLASH_SALE_FORM}>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <label htmlFor="startTime" className="block text-sm font-medium text-gray-700 mb-2">
+                    <label
+                      htmlFor="startTime"
+                      className="block text-sm font-medium text-gray-700 mb-2"
+                    >
                       Start Time
                     </label>
                     <input
@@ -359,7 +378,7 @@ const AdminPage: React.FC = () => {
                       data-testid={TEST_IDS.START_TIME_INPUT}
                       {...register('startTime', {
                         required: 'Start time is required',
-                        validate: (value) => {
+                        validate: value => {
                           if (!value) return 'Start time is required'
                           const startTime = new Date(value)
                           const endTime = new Date(watch('endTime'))
@@ -374,14 +393,20 @@ const AdminPage: React.FC = () => {
                       }`}
                     />
                     {errors.startTime && (
-                      <p className="mt-1 text-sm text-red-600" data-testid={TEST_IDS.VALIDATION_ERROR}>
+                      <p
+                        className="mt-1 text-sm text-red-600"
+                        data-testid={TEST_IDS.VALIDATION_ERROR}
+                      >
                         {errors.startTime.message}
                       </p>
                     )}
                   </div>
-                  
+
                   <div>
-                    <label htmlFor="endTime" className="block text-sm font-medium text-gray-700 mb-2">
+                    <label
+                      htmlFor="endTime"
+                      className="block text-sm font-medium text-gray-700 mb-2"
+                    >
                       End Time
                     </label>
                     <input
@@ -390,7 +415,7 @@ const AdminPage: React.FC = () => {
                       data-testid={TEST_IDS.END_TIME_INPUT}
                       {...register('endTime', {
                         required: 'End time is required',
-                        validate: (value) => {
+                        validate: value => {
                           if (!value) return 'End time is required'
                           const startTime = new Date(watch('startTime'))
                           const endTime = new Date(value)
@@ -405,7 +430,10 @@ const AdminPage: React.FC = () => {
                       }`}
                     />
                     {errors.endTime && (
-                      <p className="mt-1 text-sm text-red-600" data-testid={TEST_IDS.VALIDATION_ERROR}>
+                      <p
+                        className="mt-1 text-sm text-red-600"
+                        data-testid={TEST_IDS.VALIDATION_ERROR}
+                      >
                         {errors.endTime.message}
                       </p>
                     )}
@@ -414,7 +442,10 @@ const AdminPage: React.FC = () => {
 
                 {/* Error Message */}
                 {error && (
-                  <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-md" data-testid={TEST_IDS.ERROR_MESSAGE}>
+                  <div
+                    className="mt-4 p-4 bg-red-50 border border-red-200 rounded-md"
+                    data-testid={TEST_IDS.ERROR_MESSAGE}
+                  >
                     <div className="flex">
                       <AlertCircle className="h-5 w-5 text-red-400" />
                       <div className="ml-3">
@@ -426,7 +457,10 @@ const AdminPage: React.FC = () => {
 
                 {/* Success Message */}
                 {success && (
-                  <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-md" data-testid={TEST_IDS.SUCCESS_MESSAGE}>
+                  <div
+                    className="mt-4 p-4 bg-green-50 border border-green-200 rounded-md"
+                    data-testid={TEST_IDS.SUCCESS_MESSAGE}
+                  >
                     <div className="flex">
                       <CheckCircle className="h-5 w-5 text-green-400" />
                       <div className="ml-3">
@@ -444,7 +478,7 @@ const AdminPage: React.FC = () => {
                     data-testid={TEST_IDS.SAVE_BUTTON}
                     className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    {(isSaving || isSubmitting) ? (
+                    {isSaving || isSubmitting ? (
                       <>
                         <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
                         Saving...
