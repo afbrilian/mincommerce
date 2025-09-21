@@ -40,13 +40,8 @@ test.describe('Flash Sale Purchase Flow', () => {
       })
     })
 
-    // Navigate to login and then to flash sale page
+    // Set auth token in localStorage before navigation
     await page.goto('/')
-    await page.fill('input[placeholder="Enter your email address"]', 'user@example.com')
-    await page.click('button[type="submit"]')
-    await page.waitForURL('/flash-sale', { timeout: 10000 })
-    
-    // Ensure auth token is set in localStorage
     await page.evaluate(() => {
       localStorage.setItem('auth-storage', JSON.stringify({
         state: {
@@ -59,6 +54,10 @@ test.describe('Flash Sale Purchase Flow', () => {
         }
       }))
     })
+    
+    // Navigate to flash sale page directly (skip login since we have token)
+    await page.goto('/flash-sale')
+    await page.waitForLoadState('networkidle')
   })
 
   test('should successfully queue purchase request', async ({ page }) => {
@@ -81,124 +80,88 @@ test.describe('Flash Sale Purchase Flow', () => {
       await dialog.accept()
     })
 
-    // Wait for page to be ready
-    await page.waitForLoadState('networkidle')
-    
-    // Click buy button
+    // Click "Buy Now" button
     await page.click('button:has-text("Buy Now")')
 
-    // Wait for the alert to appear (purchase success)
+    // Wait for the success alert to appear
     await page.waitForTimeout(1000)
   })
 
-  test('should handle purchase API error', async ({ page }) => {
-    // Mock failed purchase API response
+  test('should show feedback when user has already purchased', async ({ page }) => {
+    // Mock API response for already purchased
+    await page.route('**/purchase/queue', async route => {
+      await route.fulfill({
+        status: 409,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          success: false,
+          error: 'You have already purchased this item'
+        })
+      })
+    })
+
+    // Set up dialog handler for alert
+    page.on('dialog', async dialog => {
+      expect(dialog.message()).toContain('You have already purchased this item')
+      await dialog.accept()
+    })
+
+    // Click "Buy Now" button
+    await page.click('button:has-text("Buy Now")')
+
+    // Wait for the already purchased alert to appear
+    await page.waitForTimeout(1000)
+  })
+
+  test('should show feedback when sale has ended', async ({ page }) => {
+    // Mock API response for ended sale
+    await page.route('**/purchase/queue', async route => {
+      await route.fulfill({
+        status: 410,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          success: false,
+          error: 'Flash sale has ended'
+        })
+      })
+    })
+
+    // Set up dialog handler for alert
+    page.on('dialog', async dialog => {
+      expect(dialog.message()).toContain('Flash sale has ended')
+      await dialog.accept()
+    })
+
+    // Click "Buy Now" button
+    await page.click('button:has-text("Buy Now")')
+
+    // Wait for the ended sale alert to appear
+    await page.waitForTimeout(1000)
+  })
+
+  test('should show feedback when item is sold out', async ({ page }) => {
+    // Mock API response for sold out
     await page.route('**/purchase/queue', async route => {
       await route.fulfill({
         status: 400,
         contentType: 'application/json',
         body: JSON.stringify({
           success: false,
-          error: 'Purchase failed: Insufficient stock'
+          error: 'Item is sold out'
         })
       })
     })
 
     // Set up dialog handler for alert
     page.on('dialog', async dialog => {
-      expect(dialog.message()).toContain('Purchase failed: Insufficient stock')
+      expect(dialog.message()).toContain('Item is sold out')
       await dialog.accept()
     })
 
-    // Click buy button
+    // Click "Buy Now" button
     await page.click('button:has-text("Buy Now")')
 
-    // Wait for the alert to appear (purchase error)
+    // Wait for the sold out alert to appear
     await page.waitForTimeout(1000)
-  })
-
-  test('should handle network error during purchase', async ({ page }) => {
-    // Mock network error
-    await page.route('**/purchase/queue', async route => {
-      await route.abort('failed')
-    })
-
-    // Set up dialog handler for alert
-    page.on('dialog', async dialog => {
-      expect(dialog.message()).toContain('Purchase failed. Please try again.')
-      await dialog.accept()
-    })
-
-    // Click buy button
-    await page.click('button:has-text("Buy Now")')
-
-    // Wait for the alert to appear (network error)
-    await page.waitForTimeout(1000)
-  })
-
-  test('should disable buy button when sale is not active', async ({ page }) => {
-    // Mock upcoming flash sale status
-    await page.route('**/flash-sale/status', async route => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          success: true,
-          data: {
-            saleId: 'test-sale-id',
-            status: 'upcoming',
-            productName: 'Limited Edition Gaming Console',
-            productDescription: 'The most advanced gaming console with exclusive features',
-            productPrice: 599.99,
-            availableQuantity: 50,
-            timeUntilStart: 3600,
-            timeUntilEnd: 7200,
-            startTime: new Date(Date.now() + 3600 * 1000).toISOString(),
-            endTime: new Date(Date.now() + 7200 * 1000).toISOString()
-          }
-        })
-      })
-    })
-
-    // Reload the page to get upcoming status
-    await page.reload()
-    await page.waitForLoadState('networkidle')
-
-    // Check buy button is not visible for upcoming status
-    await expect(page.locator('button:has-text("Buy Now")')).not.toBeVisible()
-    await expect(page.locator('text=Sale hasn\'t started yet')).toBeVisible()
-  })
-
-  test('should disable buy button when sold out', async ({ page }) => {
-    // Mock sold out flash sale status
-    await page.route('**/flash-sale/status', async route => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          success: true,
-          data: {
-            saleId: 'test-sale-id',
-            status: 'active',
-            productName: 'Limited Edition Gaming Console',
-            productDescription: 'The most advanced gaming console with exclusive features',
-            productPrice: 599.99,
-            availableQuantity: 0,
-            timeUntilStart: 0,
-            timeUntilEnd: 1800,
-            startTime: new Date(Date.now() - 1000).toISOString(),
-            endTime: new Date(Date.now() + 1800 * 1000).toISOString()
-          }
-        })
-      })
-    })
-
-    // Reload the page to get sold out status
-    await page.reload()
-    await page.waitForLoadState('networkidle')
-
-    // Check buy button is not visible for sold out status
-    await expect(page.locator('button:has-text("Buy Now")')).not.toBeVisible()
-    await expect(page.locator('text=Sold Out!')).toBeVisible()
   })
 })

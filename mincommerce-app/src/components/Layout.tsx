@@ -1,5 +1,5 @@
 import React from 'react'
-import { Link, useLocation } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
 import { ShoppingCart, User, LogOut } from 'lucide-react'
 
@@ -9,10 +9,12 @@ interface LayoutProps {
 
 const Layout: React.FC<LayoutProps> = ({ children }) => {
   const location = useLocation()
+  const navigate = useNavigate()
   const { user, isAuthenticated, logout } = useAuthStore()
 
   const handleLogout = () => {
     logout()
+    navigate('/')
   }
 
   const isActive = (path: string) => {

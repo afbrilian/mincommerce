@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react'
-import { Clock, Package, Users, ShoppingCart } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { Clock, Package, Users, ShoppingCart, LogOut } from 'lucide-react'
 import api from '../services/api'
+import { useAuthStore } from '../store/authStore'
 import { TEST_IDS } from '../constants'
 import {
   calculateFlashSaleStatus,
@@ -13,6 +15,8 @@ import { FLASH_SALE_STATUS } from '../constants'
 import type { FlashSaleStatus as FlashSaleStatusData } from '../types'
 
 const FlashSalePage: React.FC = () => {
+  const navigate = useNavigate()
+  const { user, logout } = useAuthStore()
   const [flashSaleStatus, setFlashSaleStatus] = useState<FlashSaleStatusData | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -107,6 +111,12 @@ const FlashSalePage: React.FC = () => {
     return calculateFlashSaleStatus(flashSaleStatus.startTime, flashSaleStatus.endTime)
   }, [flashSaleStatus])
 
+  // Handle logout
+  const handleLogout = () => {
+    logout()
+    navigate('/')
+  }
+
   const handlePurchase = async () => {
     try {
       const response = await api.purchase.queuePurchase()
@@ -162,8 +172,14 @@ const FlashSalePage: React.FC = () => {
               <h1 className="ml-2 text-2xl font-bold text-gray-900">Flash Sale</h1>
             </div>
             <div className="flex items-center space-x-4">
-              <span className="text-sm text-gray-500">Welcome, User</span>
-              <button className="text-sm text-indigo-600 hover:text-indigo-500">Logout</button>
+              <span className="text-sm text-gray-500">Welcome, {user?.email || 'User'}</span>
+              <button
+                onClick={handleLogout}
+                className="flex items-center text-sm text-indigo-600 hover:text-indigo-500"
+              >
+                <LogOut className="w-4 h-4 mr-1" />
+                Logout
+              </button>
             </div>
           </div>
         </div>

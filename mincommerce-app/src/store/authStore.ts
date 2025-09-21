@@ -56,7 +56,8 @@ export const useAuthStore = create<AuthStore>()(
           isAuthenticated: false,
           error: null
         })
-        // Clear localStorage - Zustand persist will handle this automatically
+        // Clear localStorage manually since Zustand persist doesn't clear on logout
+        localStorage.removeItem('auth-storage')
       },
 
       setLoading: (loading: boolean) => {

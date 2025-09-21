@@ -12,11 +12,6 @@ export const API_CONFIG = {
   retryAttempts: 3
 } as const
 
-// Database IDs (seeded data)
-export const SEEDED_IDS = {
-  PRODUCT_ID: 'a7d6dc16-0f52-43e8-99b3-6c4b84681a0b',
-  FLASH_SALE_ID: '9cf1eaeb-df76-475f-9eb6-38ae4339cb3c'
-} as const
 
 // Flash Sale Configuration
 export const FLASH_SALE_CONFIG = {

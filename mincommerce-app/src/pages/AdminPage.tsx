@@ -13,7 +13,7 @@ import {
 } from 'lucide-react'
 import { useAuthStore } from '../store/authStore'
 import { api } from '../services/api'
-import { SEEDED_IDS, TEST_IDS } from '../constants'
+import { TEST_IDS } from '../constants'
 import {
   calculateFlashSaleStatus,
   calculateCountdown,
@@ -51,7 +51,7 @@ const AdminPage: React.FC = () => {
     formState: { errors, isSubmitting }
   } = useForm<FlashSaleFormData>({
     defaultValues: {
-      productId: SEEDED_IDS.PRODUCT_ID,
+      productId: '',
       startTime: '',
       endTime: '',
       saleId: undefined
@@ -60,27 +60,36 @@ const AdminPage: React.FC = () => {
     reValidateMode: 'onSubmit'
   })
 
-  // Get the most recent flash sale (since we can't hardcode the ID)
-  const getMostRecentFlashSale = useCallback(async () => {
+  // Get the current flash sale status and details
+  const getCurrentFlashSale = useCallback(async () => {
     try {
-      // Use the seeded flash sale ID
-      const saleId = SEEDED_IDS.FLASH_SALE_ID
+      // Get current flash sale status (includes saleId and productId)
+      const statusResponse = await api.flashSale.getStatus()
 
-      const [saleResponse, statsResponse] = await Promise.all([
-        api.admin.getFlashSaleDetails(saleId).catch(() => null),
-        api.admin.getFlashSaleStats(saleId).catch(() => null)
-      ])
+      if (statusResponse.success && statusResponse.data) {
+        const { saleId, productId } = statusResponse.data
 
-      if (saleResponse?.success && saleResponse.data) {
-        setFlashSale(saleResponse.data)
-        setValue('productId', saleResponse.data.productId)
-        setValue('startTime', new Date(saleResponse.data.startTime).toISOString().slice(0, 16))
-        setValue('endTime', new Date(saleResponse.data.endTime).toISOString().slice(0, 16))
-        setValue('saleId', saleResponse.data.saleId)
-      }
+        // Set productId immediately from status response
+        setValue('productId', productId)
 
-      if (statsResponse?.success && statsResponse.data) {
-        setFlashSaleStats(statsResponse.data)
+        // Get detailed flash sale data and stats using the dynamic IDs
+        const [saleResponse, statsResponse] = await Promise.all([
+          api.admin.getFlashSaleDetails(saleId).catch(() => null),
+          api.admin.getFlashSaleStats(saleId).catch(() => null)
+        ])
+
+        if (saleResponse?.success && saleResponse.data) {
+          setFlashSale(saleResponse.data)
+          setValue('startTime', new Date(saleResponse.data.startTime).toISOString().slice(0, 16))
+          setValue('endTime', new Date(saleResponse.data.endTime).toISOString().slice(0, 16))
+          setValue('saleId', saleResponse.data.saleId)
+        }
+
+        if (statsResponse?.success && statsResponse.data) {
+          setFlashSaleStats(statsResponse.data)
+        }
+      } else {
+        setError('No flash sale found')
       }
     } catch (err) {
       console.error('Error fetching flash sale:', err)
@@ -107,8 +116,8 @@ const AdminPage: React.FC = () => {
 
   // Load data on component mount
   useEffect(() => {
-    getMostRecentFlashSale()
-  }, [getMostRecentFlashSale])
+    getCurrentFlashSale()
+  }, [getCurrentFlashSale])
 
   // Handle logout
   const handleLogout = () => {
@@ -143,7 +152,7 @@ const AdminPage: React.FC = () => {
         setFlashSale(response.data)
         setSuccess('Flash sale saved successfully!')
         // Reload data to get updated status
-        await getMostRecentFlashSale()
+        await getCurrentFlashSale()
       } else {
         throw new Error(response.error || 'Failed to save flash sale')
       }
@@ -497,7 +506,7 @@ const AdminPage: React.FC = () => {
               {error && (
                 <div className="mt-4">
                   <button
-                    onClick={getMostRecentFlashSale}
+                    onClick={getCurrentFlashSale}
                     data-testid={TEST_IDS.RETRY_BUTTON}
                     className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
                   >

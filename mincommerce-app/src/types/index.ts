@@ -45,6 +45,7 @@ export interface FlashSale {
 
 export interface FlashSaleStatus {
   saleId: string
+  productId: string
   status: 'upcoming' | 'active' | 'ended'
   productName: string
   productDescription: string
