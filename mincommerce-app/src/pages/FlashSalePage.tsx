@@ -12,13 +12,16 @@ import {
   type FlashSaleStatus
 } from '../utils/flashSaleUtils'
 import { FLASH_SALE_STATUS } from '../constants'
-import type { FlashSaleStatus as FlashSaleStatusData } from '../types'
+import type { FlashSaleStatus as FlashSaleStatusData, PurchaseStatus } from '../types'
+import PurchaseStatusComponent from '../components/PurchaseStatus'
 
 const FlashSalePage: React.FC = () => {
   const navigate = useNavigate()
   const { user, logout } = useAuthStore()
   const [flashSaleStatus, setFlashSaleStatus] = useState<FlashSaleStatusData | null>(null)
+  const [purchaseStatus, setPurchaseStatus] = useState<PurchaseStatus | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [isLoadingPurchaseStatus, setIsLoadingPurchaseStatus] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [timeLeft, setTimeLeft] = useState<{
     days: number
@@ -117,12 +120,32 @@ const FlashSalePage: React.FC = () => {
     navigate('/')
   }
 
+  // Fetch purchase status
+  const fetchPurchaseStatus = useCallback(async () => {
+    setIsLoadingPurchaseStatus(true)
+    try {
+      const response = await api.purchase.getStatus()
+      if (response.success && response.data) {
+        setPurchaseStatus(response.data)
+      } else {
+        setPurchaseStatus(null)
+      }
+    } catch (err) {
+      console.error('Error fetching purchase status:', err)
+      setPurchaseStatus(null)
+    } finally {
+      setIsLoadingPurchaseStatus(false)
+    }
+  }, [])
+
   const handlePurchase = async () => {
     try {
       const response = await api.purchase.queuePurchase()
       if (response.success) {
         // Handle successful queue
         alert('Purchase request queued! Check your purchase status.')
+        // Fetch the purchase status to show the user
+        await fetchPurchaseStatus()
       }
     } catch (err: unknown) {
       const errorMessage =
@@ -295,6 +318,33 @@ const FlashSalePage: React.FC = () => {
               </div>
             </div>
           )}
+
+          {/* Purchase Status Section */}
+          <div className="mt-8">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-semibold text-gray-900">Your Purchase Status</h2>
+              <button
+                onClick={fetchPurchaseStatus}
+                disabled={isLoadingPurchaseStatus}
+                className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isLoadingPurchaseStatus ? 'Checking...' : 'Check Status'}
+              </button>
+            </div>
+            {(purchaseStatus || isLoadingPurchaseStatus) && (
+              <PurchaseStatusComponent
+                purchaseStatus={purchaseStatus}
+                isLoading={isLoadingPurchaseStatus}
+              />
+            )}
+            {!purchaseStatus && !isLoadingPurchaseStatus && (
+              <div className="bg-gray-50 rounded-lg p-6 text-center">
+                <p className="text-gray-600">
+                  No purchase status available. Make a purchase to see your status here.
+                </p>
+              </div>
+            )}
+          </div>
         </div>
       </main>
     </div>

@@ -148,7 +148,7 @@ const apiService = new ApiService()
 // Export organized API methods
 export const api = {
   auth: {
-    login: (email: string) => apiService.login({ email }),
+    login: (data: LoginRequest) => apiService.login(data),
     verifyToken: (token: string) => apiService.verifyToken(token)
   },
   flashSale: {

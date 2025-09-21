@@ -97,14 +97,11 @@ export interface QueuePurchaseResponse {
 }
 
 export interface PurchaseStatus {
-  success: boolean
-  data: {
-    status: 'queued' | 'processing' | 'completed' | 'failed' | 'not_purchased'
-    orderId?: string
-    purchasedAt?: string
-    jobId?: string
-    estimatedWaitTime?: number
-  }
+  status: 'queued' | 'processing' | 'completed' | 'failed' | 'not_purchased'
+  orderId?: string
+  purchasedAt?: string
+  jobId?: string
+  estimatedWaitTime?: number
 }
 
 // Queue types

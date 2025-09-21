@@ -12,7 +12,6 @@ export const API_CONFIG = {
   retryAttempts: 3
 } as const
 
-
 // Flash Sale Configuration
 export const FLASH_SALE_CONFIG = {
   maxDuration: 24 * 60 * 60 * 1000, // 24 hours in milliseconds

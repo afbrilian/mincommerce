@@ -30,7 +30,7 @@ const LoginPage: React.FC = () => {
     setError(null)
 
     try {
-      const response = await api.auth.login(data.email)
+      const response = await api.auth.login(data)
 
       if (response.success) {
         // Use the login method from auth store to properly set authentication state

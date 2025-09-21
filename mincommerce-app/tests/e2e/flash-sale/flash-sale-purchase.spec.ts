@@ -17,7 +17,7 @@ test.describe('Flash Sale Purchase Flow', () => {
       })
     })
 
-    // Mock active flash sale status
+    // Mock flash sale status with dynamic IDs
     await page.route('**/flash-sale/status', async route => {
       await route.fulfill({
         status: 200,
@@ -26,6 +26,7 @@ test.describe('Flash Sale Purchase Flow', () => {
           success: true,
           data: {
             saleId: 'test-sale-id',
+            productId: 'test-product-id',
             status: 'active',
             productName: 'Limited Edition Gaming Console',
             productDescription: 'The most advanced gaming console with exclusive features',
@@ -47,10 +48,11 @@ test.describe('Flash Sale Purchase Flow', () => {
         state: {
           token: 'mock-user-token',
           user: {
-            id: 'user-id',
+            userId: 'user-id',
             email: 'user@example.com',
-            userType: 'user'
-          }
+            role: 'user'
+          },
+          isAuthenticated: true
         }
       }))
     })
@@ -58,11 +60,14 @@ test.describe('Flash Sale Purchase Flow', () => {
     // Navigate to flash sale page directly (skip login since we have token)
     await page.goto('/flash-sale')
     await page.waitForLoadState('networkidle')
+    
+    // Verify we're on the flash sale page
+    await expect(page.locator('h1:has-text("Flash Sale")')).toBeVisible()
   })
 
   test('should successfully queue purchase request', async ({ page }) => {
     // Mock successful purchase API response
-    await page.route('**/purchase/queue', async route => {
+    await page.route('**/purchase', async route => {
       await route.fulfill({
         status: 202,
         contentType: 'application/json',
@@ -89,7 +94,7 @@ test.describe('Flash Sale Purchase Flow', () => {
 
   test('should show feedback when user has already purchased', async ({ page }) => {
     // Mock API response for already purchased
-    await page.route('**/purchase/queue', async route => {
+    await page.route('**/purchase', async route => {
       await route.fulfill({
         status: 409,
         contentType: 'application/json',
@@ -115,7 +120,7 @@ test.describe('Flash Sale Purchase Flow', () => {
 
   test('should show feedback when sale has ended', async ({ page }) => {
     // Mock API response for ended sale
-    await page.route('**/purchase/queue', async route => {
+    await page.route('**/purchase', async route => {
       await route.fulfill({
         status: 410,
         contentType: 'application/json',
@@ -141,7 +146,7 @@ test.describe('Flash Sale Purchase Flow', () => {
 
   test('should show feedback when item is sold out', async ({ page }) => {
     // Mock API response for sold out
-    await page.route('**/purchase/queue', async route => {
+    await page.route('**/purchase', async route => {
       await route.fulfill({
         status: 400,
         contentType: 'application/json',
