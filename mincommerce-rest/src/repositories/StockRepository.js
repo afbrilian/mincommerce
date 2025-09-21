@@ -29,14 +29,17 @@ class StockRepository extends BaseRepository {
 
   async updateAvailableQuantity(productId, quantityChange) {
     try {
+      // For negative changes (decreasing stock), we need to decrease both available and total quantities
+      // to maintain the constraint: total_quantity = available_quantity + reserved_quantity
       const result = await this.db(this.tableName)
         .where('product_id', productId)
         .where('available_quantity', '>=', Math.abs(quantityChange))
         .increment('available_quantity', quantityChange)
+        .increment('total_quantity', quantityChange) // Also decrease total to maintain balance
         .update('last_updated', this.db.fn.now())
         .returning('*')
-        .first()
-      return result ? Stock.fromDatabase(result) : null
+      
+      return result && result.length > 0 ? Stock.fromDatabase(result[0]) : null
     } catch (error) {
       logger.error(`Error updating available quantity for product ${productId}:`, error)
       throw error
@@ -102,6 +105,36 @@ class StockRepository extends BaseRepository {
       return result
     } catch (error) {
       logger.error(`Error getting available stock for product ${productId}:`, error)
+      throw error
+    }
+  }
+
+  /**
+   * Acquire PostgreSQL advisory lock
+   * @param {number} lockId - Lock identifier
+   * @returns {Promise<boolean>} True if lock acquired
+   */
+  async acquireLock(lockId) {
+    try {
+      await this.db.raw('SELECT pg_advisory_lock(?)', [lockId])
+      return true
+    } catch (error) {
+      logger.error(`Error acquiring lock ${lockId}:`, error)
+      throw error
+    }
+  }
+
+  /**
+   * Release PostgreSQL advisory lock
+   * @param {number} lockId - Lock identifier
+   * @returns {Promise<boolean>} True if lock released
+   */
+  async releaseLock(lockId) {
+    try {
+      await this.db.raw('SELECT pg_advisory_unlock(?)', [lockId])
+      return true
+    } catch (error) {
+      logger.error(`Error releasing lock ${lockId}:`, error)
       throw error
     }
   }

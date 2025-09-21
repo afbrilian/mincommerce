@@ -3,7 +3,6 @@ const UserRepository = require('../repositories/UserRepository')
 const FlashSaleRepository = require('../repositories/FlashSaleRepository')
 const StockRepository = require('../repositories/StockRepository')
 const { getRedisClient } = require('../config/redis')
-const { addPurchaseJob } = require('../config/queue')
 const logger = require('../utils/logger')
 const CONSTANTS = require('../constants')
 
@@ -15,261 +14,287 @@ class PurchaseService {
     this.stockRepository = new StockRepository()
   }
 
-  async attemptPurchase(purchaseData) {
+  /**
+   * Attempt to purchase a flash sale item
+   * @param {string} userId - User ID attempting the purchase
+   * @returns {Object} Purchase result
+   */
+  async attemptPurchase(userId) {
     try {
-      const { userId, productId, saleId } = purchaseData
+      logger.info(`Purchase attempt started`, { userId })
 
       // Validate input
-      if (!userId || !productId || !saleId) {
-        throw new Error('Missing required fields: userId, productId, saleId')
+      if (!userId) {
+        throw new Error('User ID is required')
       }
 
       const redis = getRedisClient()
 
       // Check if user already has an order (fast cache check)
-      const cacheKey = CONSTANTS.REDIS_KEYS.USER_ORDER(userId, productId)
-      const existingOrderId = await redis.get(cacheKey)
+      const userOrderKey = CONSTANTS.REDIS_KEYS.USER_ORDER(userId)
+      const existingOrder = await redis.get(userOrderKey)
 
-      if (existingOrderId) {
-        logger.info(`User ${userId} already has order ${existingOrderId} for product ${productId}`)
+      if (existingOrder) {
+        logger.warn(`User already has an order`, { userId })
         return {
           success: false,
-          reason: CONSTANTS.RESPONSE_CODES.ALREADY_PURCHASED,
-          orderId: existingOrderId
+          reason: 'User has already purchased'
         }
       }
 
-      // Check rate limiting
-      const rateLimitKey = CONSTANTS.REDIS_KEYS.RATE_LIMIT(userId)
-      const attemptCount = await redis.incr(rateLimitKey)
-
-      if (attemptCount === 1) {
-        await redis.expire(rateLimitKey, CONSTANTS.CACHE_TTL.RATE_LIMIT)
-      }
-
-      if (attemptCount > CONSTANTS.RATE_LIMITS.MAX_ATTEMPTS_PER_MINUTE) {
-        logger.warn(`Rate limit exceeded for user ${userId}: ${attemptCount} attempts`)
-        throw new Error(CONSTANTS.ERROR_MESSAGES.TOO_MANY_ATTEMPTS)
-      }
-
-      // Check flash sale status quickly
-      const saleStatusKey = CONSTANTS.REDIS_KEYS.FLASH_SALE_STATUS()
-      const cachedSale = await redis.get(saleStatusKey)
-
-      if (cachedSale) {
-        const sale = JSON.parse(cachedSale)
-        if (sale.status !== CONSTANTS.SALE_STATUS.ACTIVE) {
-          return {
-            success: false,
-            reason: CONSTANTS.RESPONSE_CODES.SALE_NOT_ACTIVE,
-            saleStatus: sale.status
-          }
-        }
-
-        if (sale.availableQuantity <= 0) {
-          return {
-            success: false,
-            reason: CONSTANTS.RESPONSE_CODES.OUT_OF_STOCK
-          }
-        }
-      }
-
-      // Add purchase job to queue
-      const job = await addPurchaseJob({
-        userId,
-        productId,
-        saleId,
-        timestamp: new Date().toISOString()
-      })
-
-      logger.info(`Purchase job queued for user ${userId}, job ID: ${job.id}`)
-
-      return {
-        success: true,
-        message: CONSTANTS.SUCCESS_MESSAGES.PURCHASE_QUEUED,
-        jobId: job.id,
-        status: 'processing'
-      }
-    } catch (error) {
-      logger.error('Purchase attempt failed:', error)
-      throw error
-    }
-  }
-
-  async checkPurchaseStatus(userId, productId) {
-    try {
-      const redis = getRedisClient()
-
-      // Check cache first
-      const cacheKey = CONSTANTS.REDIS_KEYS.USER_ORDER(userId, productId)
-      const orderId = await redis.get(cacheKey)
-
-      if (orderId) {
-        // Get order details from cache
-        const orderCacheKey = CONSTANTS.REDIS_KEYS.ORDER(orderId)
-        const orderData = await redis.get(orderCacheKey)
-
-        if (orderData) {
-          const order = JSON.parse(orderData)
-          return {
-            hasOrder: true,
-            orderId: order.order_id,
-            status: order.status,
-            createdAt: order.created_at
-          }
-        }
-      }
-
-      // Check database
-      const order = await this.orderRepository.findByUserAndProduct(userId, productId)
-
-      if (order) {
-        // Update cache
-        await redis.setex(cacheKey, CONSTANTS.CACHE_TTL.USER_ORDER, order.orderId)
-        await redis.setex(
-          CONSTANTS.REDIS_KEYS.ORDER(order.orderId),
-          CONSTANTS.CACHE_TTL.ORDER_DETAILS,
-          JSON.stringify(order.toJSON())
-        )
-
+      // Get most recent flash sale
+      const recentSale = await this.flashSaleRepository.getMostRecentSale()
+      if (!recentSale) {
+        logger.warn(`No flash sale found`)
         return {
-          hasOrder: true,
-          orderId: order.orderId,
-          status: order.status,
-          createdAt: order.createdAt
+          success: false,
+          reason: 'No flash sale found'
         }
       }
 
-      return {
-        hasOrder: false,
-        message: 'No order found for this user and product'
+      // Check if sale has started
+      const now = new Date()
+      if (now < new Date(recentSale.start_time)) {
+        logger.warn(`Flash sale has not started`, { 
+          userId, 
+          startTime: recentSale.start_time,
+          now: now.toISOString()
+        })
+        return {
+          success: false,
+          reason: 'Flash sale has not started'
+        }
       }
-    } catch (error) {
-      logger.error('Error checking purchase status:', error)
-      throw error
-    }
-  }
 
-  async getUserOrders(userId) {
-    try {
-      const orders = await this.orderRepository.getUserOrdersWithProducts(userId)
-
-      return {
-        userId,
-        orders: orders.map(order => ({
-          orderId: order.order_id,
-          status: order.status,
-          createdAt: order.created_at,
-          product: {
-            name: order.product_name,
-            price: order.price,
-            imageUrl: order.image_url
-          }
-        }))
+      // Check if sale has ended
+      if (now > new Date(recentSale.end_time)) {
+        logger.warn(`Flash sale has ended`, { 
+          userId, 
+          endTime: recentSale.end_time,
+          now: now.toISOString()
+        })
+        return {
+          success: false,
+          reason: 'Flash sale has ended'
+        }
       }
-    } catch (error) {
-      logger.error(`Error getting user orders for ${userId}:`, error)
-      throw error
-    }
-  }
 
-  async processPurchase(purchaseData) {
-    try {
-      const { userId, productId, saleId } = purchaseData
+      // Get product and stock information
+      const product = await this.flashSaleRepository.getProductBySaleId(recentSale.sale_id)
+      if (!product) {
+        logger.error(`Product not found for sale`, { userId, saleId: recentSale.sale_id })
+        return {
+          success: false,
+          reason: 'Product not found'
+        }
+      }
 
-      // This method is called by the queue worker
-      const { getDatabase } = require('../config/database')
-      const db = getDatabase()
+      const stock = await this.stockRepository.findByProductId(product.product_id)
+      if (!stock || stock.available_quantity <= 0) {
+        logger.warn(`Product is out of stock`, { userId, productId: product.product_id })
+        return {
+          success: false,
+          reason: 'Product is out of stock'
+        }
+      }
 
-      // Use PostgreSQL advisory lock to ensure atomicity
-      const lockKey = `${CONSTANTS.DATABASE.ADVISORY_LOCK_PREFIX}${saleId}_product_${productId}`
-
-      // Try to acquire advisory lock (this will block other processes)
-      await db.raw('SELECT pg_advisory_lock(hashtext(?))', [lockKey])
-
+      // Use PostgreSQL advisory lock for atomic inventory check and update
+      const lockId = `inventory_${product.product_id}`.hashCode()
+      
       try {
-        // Check if user already purchased
-        const existingOrder = await this.orderRepository.findByUserAndProduct(userId, productId)
+        // Acquire advisory lock
+        await this.stockRepository.acquireLock(lockId)
 
-        if (existingOrder) {
-          logger.info(`User ${userId} already has an order for product ${productId}`)
+        // Double-check stock availability under lock
+        const currentStock = await this.stockRepository.findByProductId(product.product_id)
+        if (!currentStock || currentStock.available_quantity <= 0) {
+          logger.warn(`Stock exhausted during purchase`, { userId, productId: product.product_id })
           return {
             success: false,
-            reason: CONSTANTS.RESPONSE_CODES.ALREADY_PURCHASED,
-            orderId: existingOrder.orderId
+            reason: 'Product is out of stock'
           }
         }
 
-        // Check flash sale status
-        const sale = await this.flashSaleRepository.findById(saleId)
-
-        if (!sale || sale.status !== CONSTANTS.SALE_STATUS.ACTIVE) {
-          logger.info(`Flash sale ${saleId} is not active`)
-          return { success: false, reason: CONSTANTS.RESPONSE_CODES.SALE_NOT_ACTIVE }
-        }
-
-        // Check current time
-        const now = new Date()
-        if (now < sale.startTime || now > sale.endTime) {
-          logger.info(`Flash sale ${saleId} is outside time window`)
-          return { success: false, reason: CONSTANTS.RESPONSE_CODES.SALE_OUTSIDE_TIME_WINDOW }
-        }
-
-        // Check and update stock atomically
-        const stock = await this.stockRepository.reserveStock(productId, 1)
-
-        if (!stock) {
-          logger.info(`No stock available for product ${productId}`)
-          return { success: false, reason: CONSTANTS.RESPONSE_CODES.OUT_OF_STOCK }
-        }
-
-        // Create order
-        const order = await this.orderRepository.create({
-          userId,
-          productId,
-          status: CONSTANTS.ORDER_STATUS.CONFIRMED
-        })
-
-        // Confirm stock (move from reserved to sold)
-        await this.stockRepository.confirmStock(productId, 1)
-
-        // Update cache
-        const redis = getRedisClient()
-        await redis.setex(
-          CONSTANTS.REDIS_KEYS.ORDER(order.orderId),
-          CONSTANTS.CACHE_TTL.ORDER_DETAILS,
-          JSON.stringify(order.toJSON())
+        // Update stock (decrease by 1) BEFORE creating order
+        const updatedStock = await this.stockRepository.updateAvailableQuantity(
+          product.product_id,
+          -1
         )
-        await redis.setex(
-          CONSTANTS.REDIS_KEYS.USER_ORDER(userId, productId),
-          CONSTANTS.CACHE_TTL.USER_ORDER,
-          order.orderId
-        )
+        
+        if (!updatedStock) {
+          logger.warn(`Failed to update stock - insufficient quantity`, { 
+            userId, 
+            productId: product.product_id 
+          })
+          return {
+            success: false,
+            reason: 'Product is out of stock'
+          }
+        }
 
-        // Update stock cache
-        const updatedStock = await this.stockRepository.findByProductId(productId)
-        await redis.hset(CONSTANTS.REDIS_KEYS.STOCK(productId), {
-          available: updatedStock.availableQuantity,
-          reserved: updatedStock.reservedQuantity
+        // Create order after successful stock update
+        const orderData = {
+          user_id: userId,
+          product_id: product.product_id,
+          status: 'confirmed',
+          created_at: new Date(),
+          updated_at: new Date()
+        }
+
+        const order = await this.orderRepository.create(orderData)
+
+        // Cache user order in Redis
+        await redis.setEx(userOrderKey, 3600, JSON.stringify({
+          orderId: order.orderId,
+          productId: product.product_id,
+          status: 'confirmed',
+          purchasedAt: order.createdAt
+        }))
+
+        logger.info(`Purchase successful`, { 
+          userId, 
+          orderId: order.orderId,
+          productId: product.product_id
         })
-
-        logger.info(`Purchase successful for user ${userId}, order ${order.orderId}`)
 
         return {
           success: true,
-          orderId: order.orderId,
-          remainingStock: updatedStock.availableQuantity,
-          message: CONSTANTS.SUCCESS_MESSAGES.PURCHASE_SUCCESSFUL
+          data: {
+            orderId: order.orderId,
+            productId: product.product_id,
+            userId: userId,
+            status: 'confirmed',
+            purchasedAt: order.createdAt
+          }
         }
+
       } finally {
-        // Always release the advisory lock
-        await db.raw('SELECT pg_advisory_unlock(hashtext(?))', [lockKey])
+        // Always release the lock
+        await this.stockRepository.releaseLock(lockId)
       }
+
     } catch (error) {
-      logger.error(`Purchase processing failed for user ${purchaseData.userId}:`, error)
+      logger.error('Purchase attempt failed:', error)
+      
+      if (error.message.includes('already purchased')) {
+        return {
+          success: false,
+          reason: 'User has already purchased'
+        }
+      }
+
       throw error
     }
   }
+
+  /**
+   * Check user's purchase status
+   * @param {string} userId - User ID to check
+   * @returns {Object} Purchase status
+   */
+  async checkPurchaseStatus(userId) {
+    try {
+      logger.info(`Checking purchase status`, { userId })
+
+      if (!userId) {
+        throw new Error('User ID is required')
+      }
+
+      const redis = getRedisClient()
+
+      // Check Redis cache first
+      const userOrderKey = CONSTANTS.REDIS_KEYS.USER_ORDER(userId)
+      const cachedOrder = await redis.get(userOrderKey)
+
+      if (cachedOrder) {
+        const orderData = JSON.parse(cachedOrder)
+        logger.info(`Purchase status found in cache`, { userId, orderId: orderData.orderId })
+        
+        return {
+          data: {
+            hasPurchased: true,
+            orderId: orderData.orderId,
+            productId: orderData.productId,
+            status: orderData.status,
+            purchasedAt: orderData.purchasedAt
+          }
+        }
+      }
+
+      // Check database for any orders
+      const orders = await this.orderRepository.findByUserId(userId)
+      
+      if (orders && orders.length > 0) {
+        const order = orders[0] // Get the first order
+        
+        // Cache the result
+        await redis.setex(userOrderKey, 3600, JSON.stringify({
+          orderId: order.order_id,
+          productId: order.product_id,
+          status: order.status,
+          purchasedAt: order.created_at
+        }))
+
+        logger.info(`Purchase status found in database`, { userId, orderId: order.order_id })
+        
+        return {
+          data: {
+            hasPurchased: true,
+            orderId: order.order_id,
+            productId: order.product_id,
+            status: order.status,
+            purchasedAt: order.created_at
+          }
+        }
+      }
+
+      logger.info(`No purchase found`, { userId })
+      
+      return {
+        data: {
+          hasPurchased: false,
+          orderId: null,
+          productId: null,
+          status: null,
+          purchasedAt: null
+        }
+      }
+
+    } catch (error) {
+      logger.error('Failed to check purchase status:', error)
+      throw error
+    }
+  }
+
+  /**
+   * Get user's orders
+   * @param {string} userId - User ID
+   * @returns {Object} User orders
+   */
+  async getUserOrders(userId) {
+    try {
+      const orders = await this.orderRepository.findByUserId(userId)
+      
+      return {
+        success: true,
+        data: orders || []
+      }
+    } catch (error) {
+      logger.error('Failed to get user orders:', error)
+      throw error
+    }
+  }
+}
+
+// Helper function to generate hash code for lock ID
+String.prototype.hashCode = function() {
+  let hash = 0
+  for (let i = 0; i < this.length; i++) {
+    const char = this.charCodeAt(i)
+    hash = ((hash << 5) - hash) + char
+    hash = hash & hash // Convert to 32-bit integer
+  }
+  return Math.abs(hash)
 }
 
 module.exports = PurchaseService

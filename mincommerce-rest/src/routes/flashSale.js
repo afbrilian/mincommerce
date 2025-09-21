@@ -5,33 +5,68 @@ const logger = require('../utils/logger')
 const router = express.Router()
 const flashSaleService = new FlashSaleService()
 
-// Get flash sale status
+/**
+ * GET /flash-sale/status
+ * Get current flash sale status
+ */
 router.get('/status', async (req, res) => {
   try {
-    const saleId = req.query.saleId
-    const saleStatus = await flashSaleService.getSaleStatus(saleId)
-    res.json(saleStatus)
+    logger.info(`GET /flash-sale/status`, {
+      ip: req.ip
+    })
+
+    const saleStatus = await flashSaleService.getSaleStatus()
+
+    if (saleStatus) {
+      logger.info(`Flash sale status retrieved`, {
+        ip: req.ip,
+        status: saleStatus.status,
+        saleId: saleStatus.saleId
+      })
+
+      res.status(200).json({
+        success: true,
+        data: saleStatus
+      })
+    } else {
+      logger.info(`No active flash sale found`, {
+        ip: req.ip
+      })
+
+      res.status(200).json({
+        success: true,
+        data: null,
+        message: 'No active flash sale found'
+      })
+    }
   } catch (error) {
     logger.error('Failed to get flash sale status:', error)
 
-    if (error.message === 'No active flash sale found') {
-      return res.status(404).json({
-        error: 'No active flash sale found'
+    if (error.message === 'No flash sale found') {
+      return res.status(200).json({
+        success: true,
+        data: null,
+        message: 'No flash sale found'
       })
     }
 
     res.status(500).json({
+      success: false,
       error: 'Failed to get flash sale status'
     })
   }
 })
 
-// Get sale statistics (admin endpoint)
+/**
+ * GET /flash-sale/stats
+ * Get sale statistics (admin endpoint)
+ */
 router.get('/stats', async (req, res) => {
   try {
     const saleId = req.query.saleId
     if (!saleId) {
       return res.status(400).json({
+        success: false,
         error: 'saleId query parameter is required'
       })
     }
@@ -43,11 +78,13 @@ router.get('/stats', async (req, res) => {
 
     if (error.message === 'Flash sale not found') {
       return res.status(404).json({
+        success: false,
         error: 'Flash sale not found'
       })
     }
 
     res.status(500).json({
+      success: false,
       error: 'Failed to get flash sale statistics'
     })
   }

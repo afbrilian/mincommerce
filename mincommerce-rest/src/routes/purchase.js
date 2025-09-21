@@ -1,101 +1,183 @@
 const express = require('express')
-const Joi = require('joi')
 const PurchaseService = require('../services/PurchaseService')
+const PurchaseQueueService = require('../services/PurchaseQueueService')
+const AuthService = require('../services/AuthService')
 const logger = require('../utils/logger')
 
 const router = express.Router()
-const purchaseService = new PurchaseService()
 
-// Validation schemas
-const purchaseSchema = Joi.object({
-  userId: Joi.string().uuid().required(),
-  productId: Joi.string().uuid().required(),
-  saleId: Joi.string().uuid().required()
-})
+// Lazy initialization to avoid Redis connection issues during tests
+let purchaseService = null
+let purchaseQueueService = null
+const authService = new AuthService()
 
-const checkPurchaseSchema = Joi.object({
-  userId: Joi.string().uuid().required(),
-  productId: Joi.string().uuid().required()
-})
+const getPurchaseService = () => {
+  if (!purchaseService) {
+    purchaseService = new PurchaseService()
+  }
+  return purchaseService
+}
 
-// Attempt purchase
-router.post('/attempt', async (req, res) => {
+const getPurchaseQueueService = () => {
+  if (!purchaseQueueService) {
+    purchaseQueueService = new PurchaseQueueService()
+  }
+  return purchaseQueueService
+}
+
+/**
+ * POST /purchase
+ * Queue a purchase request for processing
+ */
+router.post('/', authService.authenticateMiddleware.bind(authService), async (req, res) => {
   try {
-    const { error, value } = purchaseSchema.validate(req.body)
+    const { userId } = req.user
 
-    if (error) {
-      return res.status(400).json({
-        error: 'Validation failed',
-        details: error.details[0].message
-      })
-    }
+    logger.info(`POST /purchase`, {
+      ip: req.ip,
+      userId
+    })
 
-    const result = await purchaseService.attemptPurchase(value)
+    // Queue the purchase request
+    const result = await getPurchaseQueueService().queuePurchase(userId)
 
-    if (
-      !result.success &&
-      result.reason === 'Too many purchase attempts. Please try again later.'
-    ) {
-      return res.status(429).json({
-        error: result.reason
-      })
-    }
+    logger.info(`Purchase queued successfully`, {
+      ip: req.ip,
+      userId,
+      jobId: result.jobId
+    })
 
-    res.json(result)
+    // Return 202 Accepted for queued request
+    res.status(202).json({
+      success: true,
+      message: result.message,
+      data: {
+        jobId: result.jobId,
+        status: result.status,
+        estimatedWaitTime: result.estimatedWaitTime
+      }
+    })
   } catch (error) {
-    logger.error('Purchase attempt failed:', error)
+    logger.error('Failed to queue purchase:', error)
 
-    if (error.message === 'Too many purchase attempts. Please try again later.') {
-      return res.status(429).json({
+    if (error.message === 'User already has a pending purchase request') {
+      return res.status(409).json({
+        success: false,
         error: error.message
       })
     }
 
     res.status(500).json({
-      error: 'Purchase attempt failed'
+      success: false,
+      error: 'Failed to queue purchase request'
     })
   }
 })
 
-// Check purchase status
-router.get('/status', async (req, res) => {
+/**
+ * GET /purchase/status
+ * Check user's purchase status (both queue and completed purchases)
+ */
+router.get('/status', authService.authenticateMiddleware.bind(authService), async (req, res) => {
   try {
-    const { error, value } = checkPurchaseSchema.validate(req.query)
+    const { userId } = req.user
 
-    if (error) {
-      return res.status(400).json({
-        error: 'Validation failed',
-        details: error.details[0].message
+    logger.info(`GET /purchase/status`, {
+      ip: req.ip,
+      userId
+    })
+
+    // Check for queued purchase first
+    const queueStatus = await getPurchaseQueueService().getUserPurchaseStatus(userId)
+    
+    if (queueStatus) {
+      // User has a queued or processing purchase
+      return res.status(200).json({
+        success: true,
+        data: {
+          status: queueStatus.status,
+          jobId: queueStatus.jobId,
+          timestamp: queueStatus.timestamp,
+          message: queueStatus.message || 'Purchase request is being processed'
+        }
       })
     }
 
-    const { userId, productId } = value
-    const result = await purchaseService.checkPurchaseStatus(userId, productId)
-    res.json(result)
+    // Check for completed purchase
+    const result = await getPurchaseService().checkPurchaseStatus(userId)
+
+    res.status(200).json({
+      success: true,
+      data: result.data
+    })
   } catch (error) {
     logger.error('Failed to check purchase status:', error)
     res.status(500).json({
+      success: false,
       error: 'Failed to check purchase status'
     })
   }
 })
 
-// Get user's orders
+/**
+ * GET /purchase/job/:jobId
+ * Check purchase job status by job ID
+ */
+router.get('/job/:jobId', authService.authenticateMiddleware.bind(authService), async (req, res) => {
+  try {
+    const { jobId } = req.params
+    const { userId } = req.user
+
+    logger.info(`GET /purchase/job/${jobId}`, {
+      ip: req.ip,
+      userId,
+      jobId
+    })
+
+    // Get job status
+    const jobStatus = await getPurchaseQueueService().getJobStatus(jobId)
+    
+    if (!jobStatus) {
+      return res.status(404).json({
+        success: false,
+        error: 'Job not found'
+      })
+    }
+
+    res.status(200).json({
+      success: true,
+      data: jobStatus
+    })
+  } catch (error) {
+    logger.error('Failed to get job status:', error)
+    res.status(500).json({
+      success: false,
+      error: 'Failed to get job status'
+    })
+  }
+})
+
+/**
+ * GET /purchase/user/:userId
+ * Get user's orders (admin endpoint)
+ */
 router.get('/user/:userId', async (req, res) => {
   try {
     const { userId } = req.params
 
     if (!userId.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
       return res.status(400).json({
+        success: false,
         error: 'Invalid user ID format'
       })
     }
 
-    const result = await purchaseService.getUserOrders(userId)
+    const result = await getPurchaseService().getUserOrders(userId)
     res.json(result)
   } catch (error) {
     logger.error('Failed to get user orders:', error)
     res.status(500).json({
+      success: false,
       error: 'Failed to get user orders'
     })
   }

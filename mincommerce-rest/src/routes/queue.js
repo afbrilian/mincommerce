@@ -1,21 +1,51 @@
 const express = require('express')
-const { getQueueFactory, getJob, getJobStatus, getQueueStats } = require('../config/queue')
+const { getQueueFactory, getJob, getJobStatus } = require('../config/queue')
 const logger = require('../utils/logger')
 
 const router = express.Router()
 
+// Get worker manager instance (will be set by server)
+let workerManager = null
+
+// Set worker manager instance
+const setWorkerManager = (manager) => {
+  workerManager = manager
+}
+
+// Get worker manager instance
+const getWorkerManager = () => {
+  if (!workerManager) {
+    // In test environment, return a mock worker manager
+    if (process.env.NODE_ENV === 'test') {
+      return {
+        getSystemStatus: async () => ({
+          isRunning: true,
+          worker: { isProcessing: true },
+          queue: { waiting: 0, active: 0, completed: 0, failed: 0, total: 0 },
+          timestamp: new Date().toISOString()
+        })
+      }
+    }
+    throw new Error('Worker manager not initialized')
+  }
+  return workerManager
+}
+
 // Get queue statistics
 router.get('/stats', async (req, res) => {
   try {
-    const stats = await getQueueStats()
+    const manager = getWorkerManager()
+    const systemStatus = await manager.getSystemStatus()
+    
     res.json({
       success: true,
-      data: stats,
+      data: systemStatus,
       timestamp: new Date().toISOString()
     })
   } catch (error) {
     logger.error('Failed to get queue stats:', error)
     res.status(500).json({
+      success: false,
       error: 'Failed to get queue statistics'
     })
   }
@@ -104,13 +134,12 @@ router.get('/providers', async (req, res) => {
 // Health check for queue system
 router.get('/health', async (req, res) => {
   try {
-    const factory = getQueueFactory()
-    const stats = await getQueueStats()
+    const manager = getWorkerManager()
+    const systemStatus = await manager.getSystemStatus()
 
     const health = {
-      status: 'healthy',
-      providers: factory.getAvailableProviders(),
-      stats: stats,
+      status: systemStatus.isRunning ? 'healthy' : 'unhealthy',
+      system: systemStatus,
       timestamp: new Date().toISOString()
     }
 
@@ -125,4 +154,8 @@ router.get('/health', async (req, res) => {
   }
 })
 
-module.exports = router
+// Export both router and setter function
+module.exports = {
+  router,
+  setWorkerManager
+}

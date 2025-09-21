@@ -108,6 +108,36 @@ const dbHelpers = {
   },
 
   /**
+   * Create stock for a product
+   */
+  async createStock(productId, stockData = {}) {
+    const db = getDatabase();
+    const defaultStockData = {
+      product_id: productId,
+      total_quantity: 100,
+      available_quantity: 100,
+      reserved_quantity: 0,
+      last_updated: new Date()
+    };
+
+    // Use onConflict to handle duplicate key constraint
+    const [stock] = await db('stocks')
+      .insert({ ...defaultStockData, ...stockData })
+      .onConflict('product_id')
+      .merge()
+      .returning('*');
+
+    return stock;
+  },
+
+  /**
+   * Cleanup test database (alias for clearAllData)
+   */
+  async cleanupTestDatabase() {
+    return this.clearAllData();
+  },
+
+  /**
    * Create test product
    */
   async createProduct(productData = {}) {
@@ -137,6 +167,13 @@ const dbHelpers = {
   async createFlashSale(productId, saleData = {}) {
     const db = getDatabase();
     const sale = generateTestData.flashSale(productId, saleData);
+    
+    console.log('createFlashSale - creating flash sale with data:', {
+      productId,
+      saleData,
+      finalSale: sale
+    });
+    
     await db('flash_sales').insert(sale);
     return sale;
   },
@@ -202,6 +239,20 @@ const redisHelpers = {
   async clearAll() {
     const redis = getRedisClient();
     await redis.flushDb();
+  },
+  
+  getRedisClient() {
+    return getRedisClient();
+  },
+
+  /**
+   * Get flash sale status from Redis cache
+   */
+  async getFlashSaleStatus(saleId = null) {
+    const redis = getRedisClient();
+    const cacheKey = saleId ? `flash_sale_status_${saleId}` : 'flash_sale_status';
+    const cached = await redis.get(cacheKey);
+    return cached ? JSON.parse(cached) : null;
   },
 
   /**

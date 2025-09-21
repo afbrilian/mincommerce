@@ -32,15 +32,31 @@ module.exports = {
     FAILED: 'failed'
   },
 
+  // Purchase job statuses
+  PURCHASE_JOB_STATUS: {
+    QUEUED: 'queued',
+    PROCESSING: 'processing',
+    COMPLETED: 'completed',
+    FAILED: 'failed',
+    CANCELLED: 'cancelled'
+  },
+
   // Redis cache keys
   REDIS_KEYS: {
-    USER_ORDER: (userId, productId) => `user_order:${userId}:${productId}`,
+    USER_ORDER: (userId) => `user_order:${userId}`,
     ORDER: orderId => `order:${orderId}`,
     FLASH_SALE_STATUS: (saleId = null) =>
       saleId ? `flash_sale_status_${saleId}` : 'flash_sale_status',
     RATE_LIMIT: userId => `rate_limit:${userId}`,
     STOCK: productId => `stock:${productId}`,
-    SALE_STATS: saleId => `sale_stats:${saleId}`
+    SALE_STATS: saleId => `sale_stats:${saleId}`,
+    // Queue-based purchase system keys
+    PURCHASE_JOB: jobId => `purchase_job:${jobId}`,
+    PURCHASE_STATUS: userId => `purchase_status:${userId}`,
+    PURCHASE_QUEUE: 'purchase_queue',
+    PURCHASE_WORKER_STATUS: workerId => `purchase_worker:${workerId}`,
+    PURCHASE_METRICS: 'purchase_metrics',
+    PURCHASE_QUEUE_STATS: 'purchase_queue_stats'
   },
 
   // Cache TTL (Time To Live) in seconds
@@ -50,7 +66,13 @@ module.exports = {
     ORDER_DETAILS: 3600, // 1 hour - stable data
     STOCK_INFO: 60, // 1 minute - moderately changing
     SALE_STATS: 300, // 5 minutes - aggregated data
-    RATE_LIMIT: 60 // 1 minute - rate limiting window
+    RATE_LIMIT: 60, // 1 minute - rate limiting window
+    // Queue-based purchase system TTL
+    PURCHASE_JOB: 3600, // 1 hour - job status tracking
+    PURCHASE_STATUS: 1800, // 30 minutes - user purchase status
+    PURCHASE_WORKER_STATUS: 300, // 5 minutes - worker health check
+    PURCHASE_METRICS: 900, // 15 minutes - performance metrics
+    PURCHASE_QUEUE_STATS: 60 // 1 minute - queue statistics
   },
 
   // Rate limiting configuration
@@ -83,6 +105,16 @@ module.exports = {
       BACKOFF_DELAY_MS: 2000,
       REMOVE_ON_COMPLETE: 100,
       REMOVE_ON_FAIL: 50
+    },
+    CONCURRENCY: {
+      PURCHASE_WORKERS: 10, // Number of concurrent purchase workers
+      MAX_JOBS_PER_WORKER: 100, // Max jobs per worker before scaling
+      WORKER_TIMEOUT_MS: 30000 // 30 seconds timeout per job
+    },
+    PERFORMANCE: {
+      BATCH_SIZE: 50, // Process jobs in batches
+      PROCESSING_INTERVAL_MS: 1000, // 1 second processing interval
+      METRICS_UPDATE_INTERVAL_MS: 5000 // 5 seconds metrics update
     }
   },
 
@@ -133,9 +165,12 @@ module.exports = {
   SUCCESS_MESSAGES: {
     PURCHASE_QUEUED: 'Purchase request queued successfully',
     PURCHASE_SUCCESSFUL: 'Purchase completed successfully',
+    PURCHASE_PROCESSING: 'Purchase is being processed',
     USER_CREATED: 'User created successfully',
     SALE_CREATED: 'Flash sale created successfully',
-    SALE_UPDATED: 'Flash sale updated successfully'
+    SALE_UPDATED: 'Flash sale updated successfully',
+    JOB_CREATED: 'Job created successfully',
+    JOB_COMPLETED: 'Job completed successfully'
   },
 
   // Validation rules

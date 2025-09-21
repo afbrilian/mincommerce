@@ -24,15 +24,15 @@ class FlashSaleService {
       if (saleId) {
         sale = await this.flashSaleRepository.getSaleWithProductAndStock(saleId)
       } else {
-        // Get the most recent active sale
-        const activeSales = await this.flashSaleRepository.findActiveSales()
-        if (activeSales.length > 0) {
-          sale = await this.flashSaleRepository.getSaleWithProductAndStock(activeSales[0].saleId)
+        // Get the most recent sale (regardless of status)
+        sale = await this.flashSaleRepository.getMostRecentSale()
+        if (sale) {
+          sale = await this.flashSaleRepository.getSaleWithProductAndStock(sale.sale_id)
         }
       }
 
       if (!sale) {
-        throw new Error('No active flash sale found')
+        throw new Error('No flash sale found')
       }
 
       // Determine sale status based on current time
@@ -49,7 +49,7 @@ class FlashSaleService {
         saleId: sale.sale_id,
         productId: sale.product_id,
         productName: sale.product_name,
-        price: sale.price,
+        productPrice: parseFloat(sale.price),
         imageUrl: sale.image_url,
         startTime: sale.start_time,
         endTime: sale.end_time,
@@ -57,8 +57,8 @@ class FlashSaleService {
         totalQuantity: sale.total_quantity,
         availableQuantity: sale.available_quantity,
         soldQuantity: sale.total_quantity - sale.available_quantity,
-        timeUntilStart: Math.max(0, sale.start_time - now),
-        timeUntilEnd: Math.max(0, sale.end_time - now)
+        timeUntilStart: sale.start_time - now,
+        timeUntilEnd: sale.end_time - now
       }
 
       // Cache for 30 seconds
