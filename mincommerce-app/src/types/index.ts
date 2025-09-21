@@ -52,6 +52,8 @@ export interface FlashSaleStatus {
   availableQuantity: number
   timeUntilStart: number
   timeUntilEnd: number
+  startTime: string
+  endTime: string
 }
 
 export interface FlashSaleStats {

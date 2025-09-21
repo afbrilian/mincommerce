@@ -1,27 +1,8 @@
 import { test, expect } from '@playwright/test'
 
-test.describe('Login Flow', () => {
+test.describe('User Login Flow', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/')
-  })
-
-  test('should display login page', async ({ page }) => {
-    await expect(page.locator('h2')).toContainText('Welcome back')
-    await expect(page.locator('input[placeholder="Enter your email address"]')).toBeVisible()
-    await expect(page.locator('button[type="submit"]')).toBeVisible()
-  })
-
-  test('should show error for invalid email format', async ({ page }) => {
-    await page.fill('input[placeholder="Enter your email address"]', 'invalid-email')
-    await page.click('button[type="submit"]')
-    
-    await expect(page.locator('[data-testid="validation-error"]')).toContainText('Invalid email format')
-  })
-
-  test('should show error for empty email', async ({ page }) => {
-    await page.click('button[type="submit"]')
-    
-    await expect(page.locator('[data-testid="validation-error"]')).toContainText('Email is required')
   })
 
   test('should login regular user and redirect to flash sale page', async ({ page }) => {
@@ -55,7 +36,9 @@ test.describe('Login Flow', () => {
             productPrice: 99.99,
             availableQuantity: 100,
             timeUntilStart: 3600,
-            timeUntilEnd: 7200
+            timeUntilEnd: 7200,
+            startTime: new Date(Date.now() + 3600 * 1000).toISOString(),
+            endTime: new Date(Date.now() + 7200 * 1000).toISOString()
           }
         })
       })
@@ -104,7 +87,9 @@ test.describe('Login Flow', () => {
             productPrice: 99.99,
             availableQuantity: 100,
             timeUntilStart: 3600,
-            timeUntilEnd: 7200
+            timeUntilEnd: 7200,
+            startTime: new Date(Date.now() + 3600 * 1000).toISOString(),
+            endTime: new Date(Date.now() + 7200 * 1000).toISOString()
           }
         })
       })

@@ -3,30 +3,21 @@ import { Clock, Package, Users, ShoppingCart } from 'lucide-react'
 import api from '../services/api'
 import { TEST_IDS } from '../constants'
 import {
-  calculateFlashSaleStatusFromRelative,
+  calculateFlashSaleStatus,
   isBuyButtonEnabled,
   getStatusColorClasses,
   getStatusText,
   type FlashSaleStatus
 } from '../utils/flashSaleUtils'
 import { FLASH_SALE_STATUS } from '../constants'
-
-interface FlashSaleStatusData {
-  saleId: string
-  status: 'upcoming' | 'active' | 'ended'
-  productName: string
-  productDescription: string
-  productPrice: number
-  availableQuantity: number
-  timeUntilStart: number
-  timeUntilEnd: number
-}
+import type { FlashSaleStatus as FlashSaleStatusData } from '../types'
 
 const FlashSalePage: React.FC = () => {
   const [flashSaleStatus, setFlashSaleStatus] = useState<FlashSaleStatusData | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [timeLeft, setTimeLeft] = useState<{
+    days: number
     hours: number
     minutes: number
     seconds: number
@@ -57,15 +48,18 @@ const FlashSalePage: React.FC = () => {
     const now = new Date().getTime()
     let targetTime: number
 
-    const currentStatus = calculateFlashSaleStatusFromRelative({
-      timeUntilStart: flashSaleStatus.timeUntilStart,
-      timeUntilEnd: flashSaleStatus.timeUntilEnd
-    })
-    if (currentStatus === 'upcoming') {
-      targetTime = now + flashSaleStatus.timeUntilStart * 1000
-    } else if (currentStatus === 'active') {
-      targetTime = now + flashSaleStatus.timeUntilEnd * 1000
+    // Use actual start and end times for more accurate calculation
+    const startTime = new Date(flashSaleStatus.startTime).getTime()
+    const endTime = new Date(flashSaleStatus.endTime).getTime()
+
+    if (now < startTime) {
+      // Sale hasn't started yet - countdown to start
+      targetTime = startTime
+    } else if (now >= startTime && now < endTime) {
+      // Sale is active - countdown to end
+      targetTime = endTime
     } else {
+      // Sale has ended
       setTimeLeft(null)
       return
     }
@@ -73,13 +67,14 @@ const FlashSalePage: React.FC = () => {
     const timeDiff = targetTime - now
 
     if (timeDiff > 0) {
-      const hours = Math.floor(timeDiff / (1000 * 60 * 60))
+      const days = Math.floor(timeDiff / (1000 * 60 * 60 * 24))
+      const hours = Math.floor((timeDiff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))
       const minutes = Math.floor((timeDiff % (1000 * 60 * 60)) / (1000 * 60))
       const seconds = Math.floor((timeDiff % (1000 * 60)) / 1000)
 
-      setTimeLeft({ hours, minutes, seconds })
+      setTimeLeft({ days, hours, minutes, seconds })
     } else {
-      setTimeLeft({ hours: 0, minutes: 0, seconds: 0 })
+      setTimeLeft({ days: 0, hours: 0, minutes: 0, seconds: 0 })
       // Refresh status when countdown reaches zero
       fetchFlashSaleStatus()
     }
@@ -109,10 +104,7 @@ const FlashSalePage: React.FC = () => {
   // Helper function to get current status
   const getCurrentStatus = useCallback((): FlashSaleStatus => {
     if (!flashSaleStatus) return FLASH_SALE_STATUS.UPCOMING
-    return calculateFlashSaleStatusFromRelative({
-      timeUntilStart: flashSaleStatus.timeUntilStart,
-      timeUntilEnd: flashSaleStatus.timeUntilEnd
-    })
+    return calculateFlashSaleStatus(flashSaleStatus.startTime, flashSaleStatus.endTime)
   }, [flashSaleStatus])
 
   const handlePurchase = async () => {
@@ -205,6 +197,12 @@ const FlashSalePage: React.FC = () => {
                       </span>
                     </div>
                     <div className="flex space-x-4">
+                      {timeLeft.days > 0 && (
+                        <div className="text-center">
+                          <div className="text-2xl font-bold text-indigo-600">{timeLeft.days}</div>
+                          <div className="text-xs text-gray-500">Days</div>
+                        </div>
+                      )}
                       <div className="text-center">
                         <div className="text-2xl font-bold text-indigo-600">{timeLeft.hours}</div>
                         <div className="text-xs text-gray-500">Hours</div>
