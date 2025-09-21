@@ -32,12 +32,10 @@ test.describe('Login Flow', () => {
         contentType: 'application/json',
         body: JSON.stringify({
           success: true,
-          data: {
-            token: 'mock-admin-token',
-            userType: 'admin',
-            email: 'admin@brilian.af',
-            userId: 'admin-user-id'
-          }
+          token: 'mock-admin-token',
+          userType: 'admin',
+          email: 'admin@brilian.af',
+          userId: 'admin-user-id'
         })
       })
     })
@@ -59,12 +57,10 @@ test.describe('Login Flow', () => {
         contentType: 'application/json',
         body: JSON.stringify({
           success: true,
-          data: {
-            token: 'mock-user-token',
-            userType: 'user',
-            email: 'user@example.com',
-            userId: 'user-id'
-          }
+          token: 'mock-user-token',
+          userType: 'user',
+          email: 'user@example.com',
+          userId: 'user-id'
         })
       })
     })
@@ -107,12 +103,10 @@ test.describe('Login Flow', () => {
         contentType: 'application/json',
         body: JSON.stringify({
           success: true,
-          data: {
-            token: 'mock-new-user-token',
-            userType: 'user',
-            email: 'newuser@example.com',
-            userId: 'new-user-id'
-          }
+          token: 'mock-new-user-token',
+          userType: 'user',
+          email: 'newuser@example.com',
+          userId: 'new-user-id'
         })
       })
     })

@@ -9,12 +9,10 @@ export interface User {
 // Authentication types
 export interface AuthResponse {
   success: boolean
-  data: {
-    token: string
-    userType: 'admin' | 'user'
-    email: string
-    userId: string
-  }
+  token: string
+  userType: 'admin' | 'user'
+  email: string
+  userId: string
 }
 
 export interface LoginRequest {

@@ -32,20 +32,22 @@ const LoginPage: React.FC = () => {
       const response = await api.auth.login(data.email)
       
       if (response.success) {
-        setToken(response.data.token)
+        setToken(response.token)
         setUser({
-          userId: response.data.userId,
-          email: response.data.email,
-          role: response.data.userType,
+          userId: response.userId,
+          email: response.email,
+          role: response.userType,
           createdAt: new Date().toISOString()
         })
 
         // Redirect based on user type
-        if (response.data.userType === 'admin') {
+        if (response.userType === 'admin') {
           navigate('/admin')
         } else {
           navigate('/flash-sale')
         }
+      } else {
+        setError('Invalid response from server')
       }
     } catch (err: unknown) {
       const errorMessage = err && typeof err === 'object' && 'response' in err 

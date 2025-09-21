@@ -35,15 +35,15 @@ export const useAuthStore = create<AuthStore>()(
       // Actions
       login: (authResponse: AuthResponse) => {
         const user: User = {
-          userId: authResponse.data.userId,
-          email: authResponse.data.email,
-          role: authResponse.data.userType,
+          userId: authResponse.userId,
+          email: authResponse.email,
+          role: authResponse.userType,
           createdAt: new Date().toISOString() // We don't get this from the API
         }
 
         set({
           user,
-          token: authResponse.data.token,
+          token: authResponse.token,
           isAuthenticated: true,
           error: null
         })
