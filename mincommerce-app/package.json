@@ -18,8 +18,6 @@
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:headed": "playwright test --headed",
-    "test:bdd": "cucumber-js",
-    "test:bdd:watch": "cucumber-js --watch",
     "clean": "rm -rf dist node_modules/.vite",
     "prepare": "husky install",
     "pre-commit": "npm run type-check && npm run lint && npm run test",
@@ -45,8 +43,6 @@
   "devDependencies": {
     "@commitlint/cli": "^19.8.1",
     "@commitlint/config-conventional": "^19.8.1",
-    "@cucumber/cucumber": "^12.2.0",
-    "@cucumber/pretty-formatter": "^2.3.0",
     "@eslint/js": "^9.35.0",
     "@playwright/test": "^1.55.0",
     "@sentry/vite-plugin": "^4.3.0",

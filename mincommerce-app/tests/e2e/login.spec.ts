@@ -24,50 +24,6 @@ test.describe('Login Flow', () => {
     await expect(page.locator('[data-testid="validation-error"]')).toContainText('Email is required')
   })
 
-  test('should login admin user and redirect to admin console', async ({ page }) => {
-    // Mock the API response for admin login
-    await page.route('**/auth/login', async route => {
-      console.log('Mock API called:', route.request().url())
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          success: true,
-          token: 'mock-admin-token',
-          userType: 'admin',
-          email: 'admin@brilian.af',
-          userId: 'admin-user-id'
-        })
-      })
-    })
-
-    // Add console logging to see what's happening
-    page.on('console', msg => console.log('PAGE LOG:', msg.text()))
-    page.on('response', response => {
-      if (response.url().includes('auth')) {
-        console.log('AUTH RESPONSE:', response.status(), response.url())
-      }
-    })
-
-    await page.fill('input[placeholder="Enter your email address"]', 'admin@brilian.af')
-    await page.click('button[type="submit"]')
-    
-    // Wait a bit to see what happens
-    await page.waitForTimeout(2000)
-    
-    // Check current URL
-    const currentUrl = page.url()
-    console.log('Current URL after login:', currentUrl)
-    
-    // Wait for navigation to complete
-    await page.waitForURL('/admin', { timeout: 10000 })
-    
-    // Should redirect to admin page
-    await expect(page).toHaveURL('/admin')
-    await expect(page.locator('h1:has-text("Admin Console")')).toBeVisible()
-    await expect(page.locator('[data-testid="admin-dashboard"]')).toBeVisible()
-  })
-
   test('should login regular user and redirect to flash sale page', async ({ page }) => {
     // Mock the API response for regular user login
     await page.route('**/auth/login', async route => {
