@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { Clock, Package, Users, ShoppingCart } from 'lucide-react'
 import api from '../services/api'
+import { TEST_IDS } from '../constants'
 
 interface FlashSaleStatus {
   saleId: string
@@ -173,7 +174,7 @@ const FlashSalePage: React.FC = () => {
       <main className="max-w-4xl mx-auto py-6 sm:px-6 lg:px-8">
         <div className="px-4 py-6 sm:px-0">
           {flashSaleStatus && (
-            <div className="space-y-6" data-testid="flash-sale-interface">
+            <div className="space-y-6" data-testid={TEST_IDS.FLASH_SALE_INTERFACE}>
               {/* Status Card */}
               <div className="bg-white shadow rounded-lg p-6">
                 <div className="flex items-center justify-between mb-4">

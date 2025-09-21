@@ -4,6 +4,7 @@ import { useForm } from 'react-hook-form'
 import { Settings, LogOut, Clock, TrendingUp, Package, AlertCircle, CheckCircle, XCircle } from 'lucide-react'
 import { useAuthStore } from '../store/authStore'
 import { api } from '../services/api'
+import { SEEDED_IDS, TEST_IDS } from '../constants'
 import type { FlashSale, FlashSaleStats, FlashSaleFormData } from '../types'
 
 const AdminPage: React.FC = () => {
@@ -33,7 +34,7 @@ const AdminPage: React.FC = () => {
     formState: { errors, isSubmitting }
   } = useForm<FlashSaleFormData>({
     defaultValues: {
-      productId: 'default-product-id', // We'll use the seeded product
+      productId: SEEDED_IDS.PRODUCT_ID,
       startTime: '',
       endTime: '',
       saleId: undefined
@@ -45,13 +46,12 @@ const AdminPage: React.FC = () => {
   // Get the most recent flash sale (since we can't hardcode the ID)
   const getMostRecentFlashSale = useCallback(async () => {
     try {
-      // For now, we'll use a mock sale ID. In production, you'd get this from an API
-      // that returns the most recent flash sale
-      const mockSaleId = 'most-recent-sale-id'
+      // Use the seeded flash sale ID
+      const saleId = SEEDED_IDS.FLASH_SALE_ID
       
       const [saleResponse, statsResponse] = await Promise.all([
-        api.admin.getFlashSaleDetails(mockSaleId).catch(() => null),
-        api.admin.getFlashSaleStats(mockSaleId).catch(() => null)
+        api.admin.getFlashSaleDetails(saleId).catch(() => null),
+        api.admin.getFlashSaleStats(saleId).catch(() => null)
       ])
 
       if (saleResponse?.success && saleResponse.data) {
@@ -235,18 +235,18 @@ const AdminPage: React.FC = () => {
       <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
         <div className="px-4 py-6 sm:px-0">
           {/* Flash Sale Management Section */}
-          <div className="bg-white shadow rounded-lg" data-testid="admin-dashboard">
+          <div className="bg-white shadow rounded-lg" data-testid={TEST_IDS.ADMIN_DASHBOARD}>
             <div className="px-4 py-5 sm:p-6">
-              <h3 className="text-lg leading-6 font-medium text-gray-900 mb-6" data-testid="flash-sale-management">
+              <h3 className="text-lg leading-6 font-medium text-gray-900 mb-6" data-testid={TEST_IDS.FLASH_SALE_MANAGEMENT}>
                 Flash Sale Management
               </h3>
 
               {/* Flash Sale Status */}
               {flashSale && (
-                <div className="mb-6 p-4 bg-gray-50 rounded-lg" data-testid="flash-sale-status">
+                <div className="mb-6 p-4 bg-gray-50 rounded-lg" data-testid={TEST_IDS.FLASH_SALE_STATUS}>
                   <div className="flex items-center justify-between mb-4">
                     <h4 className="text-md font-medium text-gray-900">Current Flash Sale Status</h4>
-                    <div data-testid="status-badge">
+                    <div data-testid={TEST_IDS.STATUS_BADGE}>
                       {getStatusBadge(flashSale.status)}
                     </div>
                   </div>
@@ -254,21 +254,21 @@ const AdminPage: React.FC = () => {
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                     <div>
                       <p className="text-sm text-gray-500">Product</p>
-                      <p className="font-medium" data-testid="product-name">Limited Edition Gaming Console</p>
+                      <p className="font-medium" data-testid={TEST_IDS.PRODUCT_NAME}>Limited Edition Gaming Console</p>
                     </div>
                     <div>
                       <p className="text-sm text-gray-500">Price</p>
-                      <p className="font-medium" data-testid="product-price">$599.99</p>
+                      <p className="font-medium" data-testid={TEST_IDS.PRODUCT_PRICE}>$599.99</p>
                     </div>
                     <div>
                       <p className="text-sm text-gray-500">Available</p>
-                      <p className="font-medium" data-testid="available-quantity">
+                      <p className="font-medium" data-testid={TEST_IDS.AVAILABLE_QUANTITY}>
                         {flashSaleStats?.availableQuantity || 0}
                       </p>
                     </div>
                     <div>
                       <p className="text-sm text-gray-500">Total Stock</p>
-                      <p className="font-medium" data-testid="total-quantity">
+                      <p className="font-medium" data-testid={TEST_IDS.TOTAL_QUANTITY}>
                         {flashSaleStats?.totalQuantity || 0}
                       </p>
                     </div>
@@ -281,7 +281,7 @@ const AdminPage: React.FC = () => {
                         {flashSale.status === 'upcoming' && (
                           <div>
                             <p className="text-sm text-gray-500">Time until start</p>
-                            <p className="text-lg font-mono" data-testid="time-until-start">
+                            <p className="text-lg font-mono" data-testid={TEST_IDS.TIME_UNTIL_START}>
                               {formatTime(countdown.timeUntilStart)}
                             </p>
                           </div>
@@ -290,13 +290,13 @@ const AdminPage: React.FC = () => {
                           <>
                             <div>
                               <p className="text-sm text-gray-500">Time since start</p>
-                              <p className="text-lg font-mono" data-testid="time-since-start">
+                              <p className="text-lg font-mono" data-testid={TEST_IDS.TIME_SINCE_START}>
                                 {formatTime(countdown.timeSinceStart)}
                               </p>
                             </div>
                             <div>
                               <p className="text-sm text-gray-500">Time until end</p>
-                              <p className="text-lg font-mono" data-testid="time-until-end">
+                              <p className="text-lg font-mono" data-testid={TEST_IDS.TIME_UNTIL_END}>
                                 {formatTime(countdown.timeUntilEnd)}
                               </p>
                             </div>
@@ -305,7 +305,7 @@ const AdminPage: React.FC = () => {
                         {flashSale.status === 'ended' && (
                           <div>
                             <p className="text-sm text-gray-500">Time since end</p>
-                            <p className="text-lg font-mono" data-testid="time-since-end">
+                            <p className="text-lg font-mono" data-testid={TEST_IDS.TIME_SINCE_END}>
                               {formatTime(countdown.timeSinceEnd)}
                             </p>
                           </div>
@@ -318,25 +318,25 @@ const AdminPage: React.FC = () => {
                   {flashSaleStats && (
                     <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-4">
                       <div className="text-center p-3 bg-blue-50 rounded">
-                        <p className="text-2xl font-bold text-blue-600" data-testid="total-orders">
+                        <p className="text-2xl font-bold text-blue-600" data-testid={TEST_IDS.TOTAL_ORDERS}>
                           {flashSaleStats.totalOrders}
                         </p>
                         <p className="text-sm text-gray-600">Total Orders</p>
                       </div>
                       <div className="text-center p-3 bg-green-50 rounded">
-                        <p className="text-2xl font-bold text-green-600" data-testid="confirmed-orders">
+                        <p className="text-2xl font-bold text-green-600" data-testid={TEST_IDS.CONFIRMED_ORDERS}>
                           {flashSaleStats.confirmedOrders}
                         </p>
                         <p className="text-sm text-gray-600">Confirmed</p>
                       </div>
                       <div className="text-center p-3 bg-yellow-50 rounded">
-                        <p className="text-2xl font-bold text-yellow-600" data-testid="pending-orders">
+                        <p className="text-2xl font-bold text-yellow-600" data-testid={TEST_IDS.PENDING_ORDERS}>
                           {flashSaleStats.pendingOrders}
                         </p>
                         <p className="text-sm text-gray-600">Pending</p>
                       </div>
                       <div className="text-center p-3 bg-purple-50 rounded">
-                        <p className="text-2xl font-bold text-purple-600" data-testid="sold-quantity">
+                        <p className="text-2xl font-bold text-purple-600" data-testid={TEST_IDS.SOLD_QUANTITY}>
                           {flashSaleStats.soldQuantity || 0}
                         </p>
                         <p className="text-sm text-gray-600">Sold</p>
@@ -347,7 +347,7 @@ const AdminPage: React.FC = () => {
               )}
 
               {/* Flash Sale Form */}
-              <form onSubmit={handleSubmit(onSubmit)} data-testid="flash-sale-form">
+              <form onSubmit={handleSubmit(onSubmit)} data-testid={TEST_IDS.FLASH_SALE_FORM}>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
                     <label htmlFor="startTime" className="block text-sm font-medium text-gray-700 mb-2">
@@ -356,7 +356,7 @@ const AdminPage: React.FC = () => {
                     <input
                       type="datetime-local"
                       id="startTime"
-                      data-testid="start-time-input"
+                      data-testid={TEST_IDS.START_TIME_INPUT}
                       {...register('startTime', {
                         required: 'Start time is required',
                         validate: (value) => {
@@ -374,7 +374,7 @@ const AdminPage: React.FC = () => {
                       }`}
                     />
                     {errors.startTime && (
-                      <p className="mt-1 text-sm text-red-600" data-testid="validation-error">
+                      <p className="mt-1 text-sm text-red-600" data-testid={TEST_IDS.VALIDATION_ERROR}>
                         {errors.startTime.message}
                       </p>
                     )}
@@ -387,7 +387,7 @@ const AdminPage: React.FC = () => {
                     <input
                       type="datetime-local"
                       id="endTime"
-                      data-testid="end-time-input"
+                      data-testid={TEST_IDS.END_TIME_INPUT}
                       {...register('endTime', {
                         required: 'End time is required',
                         validate: (value) => {
@@ -405,7 +405,7 @@ const AdminPage: React.FC = () => {
                       }`}
                     />
                     {errors.endTime && (
-                      <p className="mt-1 text-sm text-red-600" data-testid="validation-error">
+                      <p className="mt-1 text-sm text-red-600" data-testid={TEST_IDS.VALIDATION_ERROR}>
                         {errors.endTime.message}
                       </p>
                     )}
@@ -414,7 +414,7 @@ const AdminPage: React.FC = () => {
 
                 {/* Error Message */}
                 {error && (
-                  <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-md" data-testid="error-message">
+                  <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-md" data-testid={TEST_IDS.ERROR_MESSAGE}>
                     <div className="flex">
                       <AlertCircle className="h-5 w-5 text-red-400" />
                       <div className="ml-3">
@@ -426,7 +426,7 @@ const AdminPage: React.FC = () => {
 
                 {/* Success Message */}
                 {success && (
-                  <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-md" data-testid="success-message">
+                  <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-md" data-testid={TEST_IDS.SUCCESS_MESSAGE}>
                     <div className="flex">
                       <CheckCircle className="h-5 w-5 text-green-400" />
                       <div className="ml-3">
@@ -441,7 +441,7 @@ const AdminPage: React.FC = () => {
                   <button
                     type="submit"
                     disabled={isSaving || isSubmitting}
-                    data-testid="save-button"
+                    data-testid={TEST_IDS.SAVE_BUTTON}
                     className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {(isSaving || isSubmitting) ? (
@@ -464,7 +464,7 @@ const AdminPage: React.FC = () => {
                 <div className="mt-4">
                   <button
                     onClick={getMostRecentFlashSale}
-                    data-testid="retry-button"
+                    data-testid={TEST_IDS.RETRY_BUTTON}
                     className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
                   >
                     <TrendingUp className="h-4 w-4 mr-2" />

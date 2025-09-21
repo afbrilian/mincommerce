@@ -4,6 +4,7 @@ import { useForm } from 'react-hook-form'
 import { Mail, LogIn } from 'lucide-react'
 import { useAuthStore } from '../store/authStore'
 import api from '../services/api'
+import { TEST_IDS } from '../constants'
 
 interface LoginFormData {
   email: string
@@ -137,7 +138,7 @@ const LoginPage: React.FC = () => {
                     />
                   </div>
                   {errors.email && (
-                    <p className="mt-2 text-sm text-red-600 flex items-center" data-testid="validation-error">
+                    <p className="mt-2 text-sm text-red-600 flex items-center" data-testid={TEST_IDS.VALIDATION_ERROR}>
                       <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
                         <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
                       </svg>
@@ -155,7 +156,7 @@ const LoginPage: React.FC = () => {
                         </svg>
                       </div>
                       <div className="ml-3">
-                        <p className="text-sm text-red-800" data-testid="error-message">
+                        <p className="text-sm text-red-800" data-testid={TEST_IDS.ERROR_MESSAGE}>
                           {error}
                         </p>
                       </div>
