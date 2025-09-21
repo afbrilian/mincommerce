@@ -35,6 +35,22 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode; requiredRole?: 'admi
   return <>{children}</>
 }
 
+// Home Route Component - redirects based on user role
+const HomeRoute: React.FC = () => {
+  const { isAuthenticated, user } = useAuthStore()
+
+  if (!isAuthenticated) {
+    return <LoginPage />
+  }
+
+  // Redirect authenticated users to their appropriate dashboard
+  if (user?.role === 'admin') {
+    return <Navigate to="/admin" replace />
+  } else {
+    return <Navigate to="/flash-sale" replace />
+  }
+}
+
 function App() {
   return (
     <ErrorBoundary>
@@ -42,8 +58,8 @@ function App() {
         <Router>
           <div className="App">
             <Routes>
-              {/* Public Routes */}
-              <Route path="/" element={<LoginPage />} />
+              {/* Home Route - handles redirects based on authentication */}
+              <Route path="/" element={<HomeRoute />} />
               
               {/* Protected Routes */}
               <Route 

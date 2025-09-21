@@ -56,9 +56,7 @@ export const useAuthStore = create<AuthStore>()(
           isAuthenticated: false,
           error: null
         })
-        // Clear localStorage
-        localStorage.removeItem('authToken')
-        localStorage.removeItem('user')
+        // Clear localStorage - Zustand persist will handle this automatically
       },
 
       setLoading: (loading: boolean) => {

@@ -13,7 +13,7 @@ const LoginPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const navigate = useNavigate()
-  const { setToken, setUser } = useAuthStore()
+  const { login } = useAuthStore()
 
   const {
     register,
@@ -32,13 +32,8 @@ const LoginPage: React.FC = () => {
       const response = await api.auth.login(data.email)
       
       if (response.success) {
-        setToken(response.token)
-        setUser({
-          userId: response.userId,
-          email: response.email,
-          role: response.userType,
-          createdAt: new Date().toISOString()
-        })
+        // Use the login method from auth store to properly set authentication state
+        login(response)
 
         // Redirect based on user type
         if (response.userType === 'admin') {

@@ -30,9 +30,17 @@ class ApiService {
     // Request interceptor to add auth token
     this.api.interceptors.request.use(
       config => {
-        const token = localStorage.getItem('authToken')
-        if (token) {
-          config.headers.Authorization = `Bearer ${token}`
+        // Get token from Zustand persisted state
+        const authStorage = localStorage.getItem('auth-storage')
+        if (authStorage) {
+          try {
+            const { state } = JSON.parse(authStorage)
+            if (state.token) {
+              config.headers.Authorization = `Bearer ${state.token}`
+            }
+          } catch (error) {
+            console.error('Error parsing auth storage:', error)
+          }
         }
         return config
       },
@@ -47,8 +55,7 @@ class ApiService {
       error => {
         if (error.response?.status === 401) {
           // Token expired or invalid
-          localStorage.removeItem('authToken')
-          localStorage.removeItem('user')
+          localStorage.removeItem('auth-storage')
           window.location.href = '/login'
         }
         return Promise.reject(error)

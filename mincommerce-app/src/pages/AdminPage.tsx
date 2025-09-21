@@ -1,7 +1,212 @@
-import React from 'react'
-import { Settings, BarChart3, Users, Package } from 'lucide-react'
+import React, { useState, useEffect, useCallback } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { useForm } from 'react-hook-form'
+import { Settings, LogOut, Clock, TrendingUp, Package, AlertCircle, CheckCircle, XCircle } from 'lucide-react'
+import { useAuthStore } from '../store/authStore'
+import { api } from '../services/api'
+import type { FlashSale, FlashSaleStats, FlashSaleFormData } from '../types'
 
 const AdminPage: React.FC = () => {
+  const navigate = useNavigate()
+  const { user, logout } = useAuthStore()
+  
+  // State management
+  const [flashSale, setFlashSale] = useState<FlashSale | null>(null)
+  const [flashSaleStats, setFlashSaleStats] = useState<FlashSaleStats | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [isSaving, setIsSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [success, setSuccess] = useState<string | null>(null)
+  const [countdown, setCountdown] = useState<{
+    timeUntilStart: number
+    timeUntilEnd: number
+    timeSinceStart: number
+    timeSinceEnd: number
+  } | null>(null)
+
+  // React Hook Form setup
+  const {
+    register,
+    handleSubmit,
+    setValue,
+    watch,
+    formState: { errors, isSubmitting }
+  } = useForm<FlashSaleFormData>({
+    defaultValues: {
+      productId: 'default-product-id', // We'll use the seeded product
+      startTime: '',
+      endTime: '',
+      saleId: undefined
+    },
+    mode: 'onSubmit',
+    reValidateMode: 'onSubmit'
+  })
+
+  // Get the most recent flash sale (since we can't hardcode the ID)
+  const getMostRecentFlashSale = useCallback(async () => {
+    try {
+      // For now, we'll use a mock sale ID. In production, you'd get this from an API
+      // that returns the most recent flash sale
+      const mockSaleId = 'most-recent-sale-id'
+      
+      const [saleResponse, statsResponse] = await Promise.all([
+        api.admin.getFlashSaleDetails(mockSaleId).catch(() => null),
+        api.admin.getFlashSaleStats(mockSaleId).catch(() => null)
+      ])
+
+      if (saleResponse?.success && saleResponse.data) {
+        setFlashSale(saleResponse.data)
+        setValue('productId', saleResponse.data.productId)
+        setValue('startTime', new Date(saleResponse.data.startTime).toISOString().slice(0, 16))
+        setValue('endTime', new Date(saleResponse.data.endTime).toISOString().slice(0, 16))
+        setValue('saleId', saleResponse.data.saleId)
+      }
+
+      if (statsResponse?.success && statsResponse.data) {
+        setFlashSaleStats(statsResponse.data)
+      }
+    } catch (err) {
+      console.error('Error fetching flash sale:', err)
+      setError('Unable to load flash sale data')
+    } finally {
+      setIsLoading(false)
+    }
+  }, [setValue])
+
+  // Calculate countdown
+  const calculateCountdown = useCallback(() => {
+    if (!flashSale) return null
+
+    const now = new Date().getTime()
+    const startTime = new Date(flashSale.startTime).getTime()
+    const endTime = new Date(flashSale.endTime).getTime()
+
+    const timeUntilStart = Math.max(0, startTime - now)
+    const timeUntilEnd = Math.max(0, endTime - now)
+    const timeSinceStart = Math.max(0, now - startTime)
+    const timeSinceEnd = Math.max(0, now - endTime)
+
+    return {
+      timeUntilStart: Math.floor(timeUntilStart / 1000),
+      timeUntilEnd: Math.floor(timeUntilEnd / 1000),
+      timeSinceStart: Math.floor(timeSinceStart / 1000),
+      timeSinceEnd: Math.floor(timeSinceEnd / 1000)
+    }
+  }, [flashSale])
+
+  // Update countdown every second
+  useEffect(() => {
+    if (!flashSale) return
+
+    const updateCountdown = () => {
+      setCountdown(calculateCountdown())
+    }
+
+    updateCountdown()
+    const interval = setInterval(updateCountdown, 1000)
+
+    return () => clearInterval(interval)
+  }, [flashSale, calculateCountdown])
+
+  // Load data on component mount
+  useEffect(() => {
+    getMostRecentFlashSale()
+  }, [getMostRecentFlashSale])
+
+  // Handle logout
+  const handleLogout = () => {
+    logout()
+    navigate('/')
+  }
+
+  // Handle form submission
+  const onSubmit = async (data: FlashSaleFormData) => {
+    setIsSaving(true)
+    setError(null)
+    setSuccess(null)
+
+    try {
+      const startTime = new Date(data.startTime)
+      const endTime = new Date(data.endTime)
+
+      // Prepare data for API
+      const submitData: FlashSaleFormData = {
+        productId: data.productId,
+        startTime: startTime.toISOString(),
+        endTime: endTime.toISOString(),
+        saleId: data.saleId
+      }
+
+      // Call API
+      const response = data.saleId 
+        ? await api.admin.updateFlashSale(submitData)
+        : await api.admin.createFlashSale(submitData)
+
+      if (response.success && response.data) {
+        setFlashSale(response.data)
+        setSuccess('Flash sale saved successfully!')
+        // Reload data to get updated status
+        await getMostRecentFlashSale()
+      } else {
+        throw new Error(response.error || 'Failed to save flash sale')
+      }
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Something went wrong. Please try again.'
+      setError(errorMessage)
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+
+  // Format time for display
+  const formatTime = (seconds: number) => {
+    const hours = Math.floor(seconds / 3600)
+    const minutes = Math.floor((seconds % 3600) / 60)
+    const secs = seconds % 60
+    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
+  }
+
+  // Get status badge
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'upcoming':
+        return (
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+            <Clock className="w-3 h-3 mr-1" />
+            Upcoming
+          </span>
+        )
+      case 'active':
+        return (
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+            <CheckCircle className="w-3 h-3 mr-1" />
+            Active
+          </span>
+        )
+      case 'ended':
+        return (
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+            <XCircle className="w-3 h-3 mr-1" />
+            Ended
+          </span>
+        )
+      default:
+        return null
+    }
+  }
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading admin console...</p>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -13,8 +218,12 @@ const AdminPage: React.FC = () => {
               <h1 className="ml-2 text-2xl font-bold text-gray-900">Admin Console</h1>
             </div>
             <div className="flex items-center space-x-4">
-              <span className="text-sm text-gray-500">Welcome, Admin</span>
-              <button className="text-sm text-indigo-600 hover:text-indigo-500">
+              <span className="text-sm text-gray-500">Welcome, {user?.email}</span>
+              <button 
+                onClick={handleLogout}
+                className="flex items-center text-sm text-indigo-600 hover:text-indigo-500"
+              >
+                <LogOut className="w-4 h-4 mr-1" />
                 Logout
               </button>
             </div>
@@ -25,149 +234,244 @@ const AdminPage: React.FC = () => {
       {/* Main Content */}
       <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
         <div className="px-4 py-6 sm:px-0">
-          {/* Dashboard Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            {/* Flash Sale Management */}
-            <div className="bg-white overflow-hidden shadow rounded-lg">
-              <div className="p-5">
-                <div className="flex items-center">
-                  <div className="flex-shrink-0">
-                    <Package className="h-6 w-6 text-indigo-600" />
-                  </div>
-                  <div className="ml-5 w-0 flex-1">
-                    <dl>
-                      <dt className="text-sm font-medium text-gray-500 truncate">
-                        Flash Sale Management
-                      </dt>
-                      <dd className="text-lg font-medium text-gray-900">
-                        Active Sales
-                      </dd>
-                    </dl>
-                  </div>
-                </div>
-              </div>
-              <div className="bg-gray-50 px-5 py-3">
-                <div className="text-sm">
-                  <button className="font-medium text-indigo-600 hover:text-indigo-500">
-                    Manage Sales
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            {/* Analytics */}
-            <div className="bg-white overflow-hidden shadow rounded-lg">
-              <div className="p-5">
-                <div className="flex items-center">
-                  <div className="flex-shrink-0">
-                    <BarChart3 className="h-6 w-6 text-green-600" />
-                  </div>
-                  <div className="ml-5 w-0 flex-1">
-                    <dl>
-                      <dt className="text-sm font-medium text-gray-500 truncate">
-                        Analytics
-                      </dt>
-                      <dd className="text-lg font-medium text-gray-900">
-                        Performance
-                      </dd>
-                    </dl>
-                  </div>
-                </div>
-              </div>
-              <div className="bg-gray-50 px-5 py-3">
-                <div className="text-sm">
-                  <button className="font-medium text-green-600 hover:text-green-500">
-                    View Reports
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            {/* User Management */}
-            <div className="bg-white overflow-hidden shadow rounded-lg">
-              <div className="p-5">
-                <div className="flex items-center">
-                  <div className="flex-shrink-0">
-                    <Users className="h-6 w-6 text-yellow-600" />
-                  </div>
-                  <div className="ml-5 w-0 flex-1">
-                    <dl>
-                      <dt className="text-sm font-medium text-gray-500 truncate">
-                        User Management
-                      </dt>
-                      <dd className="text-lg font-medium text-gray-900">
-                        Total Users
-                      </dd>
-                    </dl>
-                  </div>
-                </div>
-              </div>
-              <div className="bg-gray-50 px-5 py-3">
-                <div className="text-sm">
-                  <button className="font-medium text-yellow-600 hover:text-yellow-500">
-                    Manage Users
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            {/* System Status */}
-            <div className="bg-white overflow-hidden shadow rounded-lg">
-              <div className="p-5">
-                <div className="flex items-center">
-                  <div className="flex-shrink-0">
-                    <div className="h-6 w-6 bg-green-400 rounded-full"></div>
-                  </div>
-                  <div className="ml-5 w-0 flex-1">
-                    <dl>
-                      <dt className="text-sm font-medium text-gray-500 truncate">
-                        System Status
-                      </dt>
-                      <dd className="text-lg font-medium text-gray-900">
-                        All Systems Operational
-                      </dd>
-                    </dl>
-                  </div>
-                </div>
-              </div>
-              <div className="bg-gray-50 px-5 py-3">
-                <div className="text-sm">
-                  <button className="font-medium text-gray-600 hover:text-gray-500">
-                    View Details
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-
           {/* Flash Sale Management Section */}
           <div className="bg-white shadow rounded-lg" data-testid="admin-dashboard">
             <div className="px-4 py-5 sm:p-6">
-              <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">
+              <h3 className="text-lg leading-6 font-medium text-gray-900 mb-6" data-testid="flash-sale-management">
                 Flash Sale Management
               </h3>
-              <div className="space-y-4">
-                <div className="border border-gray-200 rounded-lg p-4">
-                  <h4 className="text-md font-medium text-gray-900 mb-2">
-                    Create New Flash Sale
-                  </h4>
-                  <p className="text-sm text-gray-600 mb-4">
-                    Set up a new flash sale with product, timing, and stock information.
-                  </p>
-                  <button className="bg-indigo-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-indigo-700">
-                    Create Flash Sale
+
+              {/* Flash Sale Status */}
+              {flashSale && (
+                <div className="mb-6 p-4 bg-gray-50 rounded-lg" data-testid="flash-sale-status">
+                  <div className="flex items-center justify-between mb-4">
+                    <h4 className="text-md font-medium text-gray-900">Current Flash Sale Status</h4>
+                    <div data-testid="status-badge">
+                      {getStatusBadge(flashSale.status)}
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div>
+                      <p className="text-sm text-gray-500">Product</p>
+                      <p className="font-medium" data-testid="product-name">Limited Edition Gaming Console</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-500">Price</p>
+                      <p className="font-medium" data-testid="product-price">$599.99</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-500">Available</p>
+                      <p className="font-medium" data-testid="available-quantity">
+                        {flashSaleStats?.availableQuantity || 0}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-500">Total Stock</p>
+                      <p className="font-medium" data-testid="total-quantity">
+                        {flashSaleStats?.totalQuantity || 0}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Countdown Timer */}
+                  {countdown && (
+                    <div className="mt-4 p-3 bg-white rounded border">
+                      <div className="flex items-center space-x-6">
+                        {flashSale.status === 'upcoming' && (
+                          <div>
+                            <p className="text-sm text-gray-500">Time until start</p>
+                            <p className="text-lg font-mono" data-testid="time-until-start">
+                              {formatTime(countdown.timeUntilStart)}
+                            </p>
+                          </div>
+                        )}
+                        {flashSale.status === 'active' && (
+                          <>
+                            <div>
+                              <p className="text-sm text-gray-500">Time since start</p>
+                              <p className="text-lg font-mono" data-testid="time-since-start">
+                                {formatTime(countdown.timeSinceStart)}
+                              </p>
+                            </div>
+                            <div>
+                              <p className="text-sm text-gray-500">Time until end</p>
+                              <p className="text-lg font-mono" data-testid="time-until-end">
+                                {formatTime(countdown.timeUntilEnd)}
+                              </p>
+                            </div>
+                          </>
+                        )}
+                        {flashSale.status === 'ended' && (
+                          <div>
+                            <p className="text-sm text-gray-500">Time since end</p>
+                            <p className="text-lg font-mono" data-testid="time-since-end">
+                              {formatTime(countdown.timeSinceEnd)}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Statistics */}
+                  {flashSaleStats && (
+                    <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-4">
+                      <div className="text-center p-3 bg-blue-50 rounded">
+                        <p className="text-2xl font-bold text-blue-600" data-testid="total-orders">
+                          {flashSaleStats.totalOrders}
+                        </p>
+                        <p className="text-sm text-gray-600">Total Orders</p>
+                      </div>
+                      <div className="text-center p-3 bg-green-50 rounded">
+                        <p className="text-2xl font-bold text-green-600" data-testid="confirmed-orders">
+                          {flashSaleStats.confirmedOrders}
+                        </p>
+                        <p className="text-sm text-gray-600">Confirmed</p>
+                      </div>
+                      <div className="text-center p-3 bg-yellow-50 rounded">
+                        <p className="text-2xl font-bold text-yellow-600" data-testid="pending-orders">
+                          {flashSaleStats.pendingOrders}
+                        </p>
+                        <p className="text-sm text-gray-600">Pending</p>
+                      </div>
+                      <div className="text-center p-3 bg-purple-50 rounded">
+                        <p className="text-2xl font-bold text-purple-600" data-testid="sold-quantity">
+                          {flashSaleStats.soldQuantity || 0}
+                        </p>
+                        <p className="text-sm text-gray-600">Sold</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Flash Sale Form */}
+              <form onSubmit={handleSubmit(onSubmit)} data-testid="flash-sale-form">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label htmlFor="startTime" className="block text-sm font-medium text-gray-700 mb-2">
+                      Start Time
+                    </label>
+                    <input
+                      type="datetime-local"
+                      id="startTime"
+                      data-testid="start-time-input"
+                      {...register('startTime', {
+                        required: 'Start time is required',
+                        validate: (value) => {
+                          if (!value) return 'Start time is required'
+                          const startTime = new Date(value)
+                          const endTime = new Date(watch('endTime'))
+                          if (watch('endTime') && endTime <= startTime) {
+                            return 'Start time must be before end time'
+                          }
+                          return true
+                        }
+                      })}
+                      className={`block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 ${
+                        errors.startTime ? 'border-red-300' : 'border-gray-300'
+                      }`}
+                    />
+                    {errors.startTime && (
+                      <p className="mt-1 text-sm text-red-600" data-testid="validation-error">
+                        {errors.startTime.message}
+                      </p>
+                    )}
+                  </div>
+                  
+                  <div>
+                    <label htmlFor="endTime" className="block text-sm font-medium text-gray-700 mb-2">
+                      End Time
+                    </label>
+                    <input
+                      type="datetime-local"
+                      id="endTime"
+                      data-testid="end-time-input"
+                      {...register('endTime', {
+                        required: 'End time is required',
+                        validate: (value) => {
+                          if (!value) return 'End time is required'
+                          const startTime = new Date(watch('startTime'))
+                          const endTime = new Date(value)
+                          if (watch('startTime') && endTime <= startTime) {
+                            return 'End time must be after start time'
+                          }
+                          return true
+                        }
+                      })}
+                      className={`block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 ${
+                        errors.endTime ? 'border-red-300' : 'border-gray-300'
+                      }`}
+                    />
+                    {errors.endTime && (
+                      <p className="mt-1 text-sm text-red-600" data-testid="validation-error">
+                        {errors.endTime.message}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Error Message */}
+                {error && (
+                  <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-md" data-testid="error-message">
+                    <div className="flex">
+                      <AlertCircle className="h-5 w-5 text-red-400" />
+                      <div className="ml-3">
+                        <p className="text-sm text-red-800">{error}</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Success Message */}
+                {success && (
+                  <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-md" data-testid="success-message">
+                    <div className="flex">
+                      <CheckCircle className="h-5 w-5 text-green-400" />
+                      <div className="ml-3">
+                        <p className="text-sm text-green-800">{success}</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Save Button */}
+                <div className="mt-6">
+                  <button
+                    type="submit"
+                    disabled={isSaving || isSubmitting}
+                    data-testid="save-button"
+                    className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {(isSaving || isSubmitting) ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                        Saving...
+                      </>
+                    ) : (
+                      <>
+                        <Package className="h-4 w-4 mr-2" />
+                        Save Flash Sale
+                      </>
+                    )}
                   </button>
                 </div>
-                
-                <div className="border border-gray-200 rounded-lg p-4">
-                  <h4 className="text-md font-medium text-gray-900 mb-2">
-                    Active Flash Sales
-                  </h4>
-                  <p className="text-sm text-gray-600">
-                    No active flash sales at the moment.
-                  </p>
+              </form>
+
+              {/* Retry Button for Error State */}
+              {error && (
+                <div className="mt-4">
+                  <button
+                    onClick={getMostRecentFlashSale}
+                    data-testid="retry-button"
+                    className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                  >
+                    <TrendingUp className="h-4 w-4 mr-2" />
+                    Retry
+                  </button>
                 </div>
-              </div>
+              )}
             </div>
           </div>
         </div>
