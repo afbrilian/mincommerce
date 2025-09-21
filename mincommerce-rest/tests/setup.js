@@ -64,4 +64,7 @@ beforeEach(async () => {
   // Re-seed data for each test to ensure isolation
   const db = getDatabase();
   await db.seed.run();
+  
+  // Wait a moment to ensure seeding is complete
+  await new Promise(resolve => setTimeout(resolve, 100));
 });
