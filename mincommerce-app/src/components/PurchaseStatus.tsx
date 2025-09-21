@@ -71,8 +71,29 @@ const PurchaseStatusComponent: React.FC<PurchaseStatusProps> = ({
     }
   }
 
+  const getReasonMessage = (reason?: string) => {
+    if (!reason) return null
+
+    const reasonMessages: Record<string, string> = {
+      OUT_OF_STOCK: 'Item is sold out',
+      ALREADY_PURCHASED: 'You have already purchased this item',
+      SALE_NOT_ACTIVE: 'Flash sale is not currently active',
+      SALE_ENDED: 'Flash sale has ended',
+      SALE_NOT_STARTED: 'Flash sale has not started yet',
+      TOO_MANY_ATTEMPTS: 'Too many purchase attempts. Please try again later.',
+      PROCESSING_FAILED: 'Purchase processing failed. Please try again.',
+      INVALID_REQUEST: 'Invalid purchase request',
+      USER_NOT_FOUND: 'User not found',
+      PRODUCT_NOT_FOUND: 'Product not found',
+      SALE_NOT_FOUND: 'Flash sale not found'
+    }
+
+    return reasonMessages[reason] || `Purchase failed: ${reason}`
+  }
+
   const config = getStatusConfig(purchaseStatus.status)
   const IconComponent = config.icon
+  const reasonMessage = getReasonMessage(purchaseStatus.reason)
 
   const formatDate = (dateString?: string) => {
     if (!dateString) return 'N/A'
@@ -152,7 +173,7 @@ const PurchaseStatusComponent: React.FC<PurchaseStatusProps> = ({
       {purchaseStatus.status === 'failed' && (
         <div className="mt-4 p-3 bg-red-50 rounded-md">
           <p className="text-sm text-red-800">
-            ❌ Your purchase failed. Please try again or contact support.
+            ❌ {reasonMessage || 'Your purchase failed. Please try again or contact support.'}
           </p>
         </div>
       )}

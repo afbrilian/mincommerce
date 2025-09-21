@@ -93,15 +93,61 @@ class PurchaseQueueService {
   }
 
   /**
-   * Get purchase status for a user
+   * Get purchase status for a user with detailed job results
    * @param {string} userId - User ID
-   * @returns {Promise<Object>} Purchase status
+   * @returns {Promise<Object>} Enhanced purchase status with success/reason
    */
   async getUserPurchaseStatus(userId) {
     try {
       const statusKey = CONSTANTS.REDIS_KEYS.PURCHASE_STATUS(userId)
       const status = await this.getRedis().get(statusKey)
-      return status ? JSON.parse(status) : null
+
+      if (!status) {
+        return null
+      }
+
+      const userStatus = JSON.parse(status)
+
+      // If we have a jobId, get the detailed job result
+      if (userStatus.jobId) {
+        const jobKey = CONSTANTS.REDIS_KEYS.PURCHASE_JOB(userStatus.jobId)
+        const jobData = await this.getRedis().get(jobKey)
+
+        if (jobData) {
+          const job = JSON.parse(jobData)
+
+          // Map job status to purchase status
+          let purchaseStatus = userStatus.status
+          let success = false
+          let reason = null
+
+          if (job.status === 'completed' && job.result) {
+            success = job.result.success || false
+            reason = job.result.reason || null
+
+            // Map success/failure to appropriate status
+            if (success) {
+              purchaseStatus = 'completed'
+            } else {
+              purchaseStatus = 'failed'
+            }
+          } else if (job.status === 'failed') {
+            purchaseStatus = 'failed'
+            success = false
+            reason = job.failedReason || 'PROCESSING_FAILED'
+          }
+
+          return {
+            ...userStatus,
+            status: purchaseStatus,
+            success,
+            reason
+          }
+        }
+      }
+
+      // Return basic status if no job details found
+      return userStatus
     } catch (error) {
       logger.error('Failed to get user purchase status:', error)
       return null

@@ -111,7 +111,7 @@ router.post('/', authService.authenticateMiddleware.bind(authService), async (re
  * /purchase/status:
  *   get:
  *     summary: Get purchase status
- *     description: Check the user's purchase status, including queued, processing, and completed purchases
+ *     description: Check the user's purchase status with detailed job results including success/failure reasons
  *     tags: [Purchase]
  *     security:
  *       - bearerAuth: []
@@ -121,7 +121,45 @@ router.post('/', authService.authenticateMiddleware.bind(authService), async (re
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/PurchaseStatus'
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     status:
+ *                       type: string
+ *                       enum: [queued, processing, completed, failed, not_purchased]
+ *                       example: completed
+ *                     jobId:
+ *                       type: string
+ *                       example: "job_123456789"
+ *                     timestamp:
+ *                       type: string
+ *                       format: date-time
+ *                       example: "2023-01-01T00:00:00.000Z"
+ *                     message:
+ *                       type: string
+ *                       example: "Purchase request is being processed"
+ *                     success:
+ *                       type: boolean
+ *                       example: true
+ *                     reason:
+ *                       type: string
+ *                       example: "OUT_OF_STOCK"
+ *                       description: "Error reason code for failed purchases"
+ *                     orderId:
+ *                       type: string
+ *                       example: "123e4567-e89b-12d3-a456-426614174000"
+ *                     purchasedAt:
+ *                       type: string
+ *                       format: date-time
+ *                       example: "2023-01-01T00:00:00.000Z"
+ *                     estimatedWaitTime:
+ *                       type: number
+ *                       example: 30
  *       401:
  *         description: Authentication required
  *         content:
@@ -155,7 +193,12 @@ router.get('/status', authService.authenticateMiddleware.bind(authService), asyn
           status: queueStatus.status,
           jobId: queueStatus.jobId,
           timestamp: queueStatus.timestamp,
-          message: queueStatus.message || 'Purchase request is being processed'
+          message: queueStatus.message || 'Purchase request is being processed',
+          success: queueStatus.success,
+          reason: queueStatus.reason,
+          orderId: queueStatus.orderId,
+          purchasedAt: queueStatus.purchasedAt,
+          estimatedWaitTime: queueStatus.estimatedWaitTime
         }
       })
     }

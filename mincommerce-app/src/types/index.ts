@@ -102,6 +102,8 @@ export interface PurchaseStatus {
   purchasedAt?: string
   jobId?: string
   estimatedWaitTime?: number
+  success?: boolean
+  reason?: string
 }
 
 // Queue types

@@ -6,6 +6,17 @@ const { getRedisClient } = require('../config/redis')
 const logger = require('../utils/logger')
 const CONSTANTS = require('../constants')
 
+// Helper function to generate hash code for lock ID
+String.prototype.hashCode = function () {
+  let hash = 0
+  for (let i = 0; i < this.length; i++) {
+    const char = this.charCodeAt(i)
+    hash = (hash << 5) - hash + char
+    hash = hash & hash // Convert to 32-bit integer
+  }
+  return Math.abs(hash)
+}
+
 class PurchaseService {
   constructor() {
     this.orderRepository = new OrderRepository()
@@ -101,6 +112,13 @@ class PurchaseService {
       // Use PostgreSQL advisory lock for atomic inventory check and update
       const lockId = `inventory_${product.product_id}`.hashCode()
 
+      logger.info(`Acquiring lock for purchase`, {
+        userId,
+        productId: product.product_id,
+        lockId,
+        lockString: `inventory_${product.product_id}`
+      })
+
       try {
         // Acquire advisory lock
         await this.stockRepository.acquireLock(lockId)
@@ -173,6 +191,11 @@ class PurchaseService {
         }
       } finally {
         // Always release the lock
+        logger.info(`Releasing lock for purchase`, {
+          userId,
+          productId: product.product_id,
+          lockId
+        })
         await this.stockRepository.releaseLock(lockId)
       }
     } catch (error) {
@@ -320,17 +343,6 @@ class PurchaseService {
       throw error
     }
   }
-}
-
-// Helper function to generate hash code for lock ID
-String.prototype.hashCode = function () {
-  let hash = 0
-  for (let i = 0; i < this.length; i++) {
-    const char = this.charCodeAt(i)
-    hash = (hash << 5) - hash + char
-    hash = hash & hash // Convert to 32-bit integer
-  }
-  return Math.abs(hash)
 }
 
 module.exports = PurchaseService
