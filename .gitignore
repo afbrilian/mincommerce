@@ -106,3 +106,6 @@ coverage/
 # Playwright
 playwright-report/
 playwright/.cache/
+
+# Stress test results
+mincommerce-rest/tests/stress/results/

@@ -77,9 +77,9 @@ module.exports = {
 
   // Rate limiting configuration
   RATE_LIMITS: {
-    MAX_ATTEMPTS_PER_MINUTE: 10,
-    WINDOW_MS: 60000, // 1 minute in milliseconds
-    MAX_REQUESTS_PER_WINDOW: 100, // Global rate limit
+    MAX_ATTEMPTS_PER_MINUTE: 100,
+    WINDOW_MS: 60000,
+    MAX_REQUESTS_PER_WINDOW: 1000,
     WINDOW_DURATION_MS: 15 * 60 * 1000 // 15 minutes
   },
 

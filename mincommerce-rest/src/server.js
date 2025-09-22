@@ -27,6 +27,7 @@ const { connectRedis } = require('./config/redis')
 const { initializeQueue } = require('./config/queue')
 const WorkerManager = require('./workers/WorkerManager')
 const { swaggerUi, specs, serve, setup } = require('./config/swagger')
+const { RATE_LIMITS } = require('./constants')
 
 const app = express()
 const PORT = process.env.PORT || 3001
@@ -57,10 +58,10 @@ app.use(
   })
 )
 
-// Rate limiting
+// Rate limiting - Using constants for consistency
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each IP to 100 requests per windowMs
+  windowMs: RATE_LIMITS.WINDOW_DURATION_MS, // 1 minute
+  max: RATE_LIMITS.MAX_REQUESTS_PER_WINDOW, // 1000 requests per window
   message: {
     success: false,
     error: 'Too many requests from this IP, please try again later.'

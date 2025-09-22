@@ -83,22 +83,9 @@ This system prioritizes **simplicity, reliability, and scalability** over comple
 
 ## 🚀 Quick Start
 
-### **Option 1: Docker Setup (Recommended)**
-```bash
-# Clone and start all services
-git clone https://github.com/afbrilian/mincommerce.git
-cd mincommerce
-docker-compose up -d
-
-# Run database setup
-docker-compose exec api npm run migrate
-docker-compose exec api npm run seed
-```
-
-### **Option 2: Local Development**
 ```bash
 # Start infrastructure only
-docker-compose up postgres redis -d
+docker compose up postgres redis -d
 
 # Backend
 cd mincommerce-rest
@@ -257,7 +244,7 @@ async queuePurchase(userId) {
 The system is containerized and ready for production deployment:
 
 ```bash
-# Production build
+# Production build #TODO
 docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
 ```
 
