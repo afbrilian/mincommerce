@@ -21,7 +21,7 @@ A production-ready flash sale platform designed to handle high-concurrency scena
                        └──────────────────┘
 ```
 
-### **Data Flow:**
+### Data Flow
 1. **User Request** → React Frontend
 2. **Load Balancing** → Nginx (future scaling)
 3. **API Processing** → Express.js with Repository Pattern
@@ -31,12 +31,12 @@ A production-ready flash sale platform designed to handle high-concurrency scena
 
 ## 🎯 Why This Architecture?
 
-### **Design Philosophy**
+### Design Philosophy
 This system prioritizes **simplicity, reliability, and scalability** over complexity. Having worked in e-commerce companies, I've seen how over-engineering can lead to maintenance nightmares. This architecture balances sophistication with pragmatism.
 
-### **Key Design Choices & Trade-offs**
+### Key Design Choices & Trade-offs
 
-#### **1. Express.js over NestJS**
+#### 1. Express.js over NestJS
 ```javascript
 // Chose Express.js for:
 ✅ Lower overhead - better for high-throughput scenarios
@@ -47,7 +47,7 @@ This system prioritizes **simplicity, reliability, and scalability** over comple
 // Trade-off: Less built-in features, but more flexibility
 ```
 
-#### **2. Repository Pattern over CQRS**
+#### 2. Repository Pattern over CQRS
 ```javascript
 // Chose Repository Pattern because:
 ✅ Single source of truth - easier to maintain consistency
@@ -58,7 +58,7 @@ This system prioritizes **simplicity, reliability, and scalability** over comple
 // Trade-off: Less scalable for complex read/write patterns, but sufficient for flash sales
 ```
 
-#### **3. Bull Queue over Kafka**
+#### 3. Bull Queue over Kafka
 ```javascript
 // Chose Bull for initial implementation:
 ✅ Simple setup - faster development and testing
@@ -69,7 +69,7 @@ This system prioritizes **simplicity, reliability, and scalability** over comple
 // Trade-off: Lower throughput than Kafka, but adequate for current needs
 ```
 
-#### **4. Simplified Stock Management**
+#### 4. Simplified Stock Management
 ```javascript
 // Direct stock reduction vs. reservation system:
 ✅ Faster processing - no extra reservation step
@@ -100,7 +100,7 @@ npm install
 npm run dev
 ```
 
-### **Access Points**
+### Access Points
 - **Frontend**: http://localhost:3000
 - **API**: http://localhost:3001/api
 - **Health Check**: http://localhost:3001/api/health
@@ -108,7 +108,7 @@ npm run dev
 
 ## 🧪 Testing
 
-### **Unit & Integration Tests**
+### Unit & Integration Tests
 ```bash
 # Backend tests
 cd mincommerce-rest
@@ -122,67 +122,50 @@ npm test
 npm run test:e2e
 ```
 
-### **Stress Testing**
+### Stress Testing
 
 The system includes comprehensive stress testing to validate performance under extreme load scenarios.
 
-#### **Available Stress Test Scenarios**
+#### Running All Stress Tests
+```bash
+# Run comprehensive stress test suite and report
+npm run stress:run
+```
 
-1. **10K Concurrent Users Test**
-   ```bash
-   cd mincommerce-rest
-   npm run stress:10k-users
-   ```
-
-2. **1K Concurrent Purchases Test**
-   ```bash
-   npm run stress:1k-purchases
-   ```
-
-3. **100K Requests Throughput Test**
-   ```bash
-   npm run stress:100k-requests
-   ```
-
-4. **Database Stress Test**
-   ```bash
-   npm run stress:database
-   ```
-
-#### **Expected Outcomes**
+#### Expected Outcomes
 
 Based on comprehensive stress testing, the system demonstrates:
 
-| Test Scenario | Target | Achieved | Status |
-|---------------|--------|----------|---------|
-| **Concurrent Users** | 10K+ | 309K+ | ✅ **30x Exceeded** |
-| **Concurrent Purchases** | 1K+ | 114K+ | ✅ **114x Exceeded** |
-| **Request Throughput** | 100K+ | 317K+ | ✅ **3x Exceeded** |
-| **System Stability** | No crashes | Zero crashes | ✅ **Perfect** |
+```
+================================================================================
+📊 STRESS TEST SUMMARY
+================================================================================
 
-#### **Performance Benchmarks**
+⏱️  Execution:
+   Total Duration: 1389s
+   Tests Run: 4/4
+   Success Rate: 100%
 
-- **Response Times**: P95 < 750ms under extreme load
-- **Throughput**: 788 RPS average, 856 RPS peak
-- **Error Handling**: Graceful degradation with rate limiting
-- **Race Conditions**: Zero overselling detected
-- **Data Integrity**: 100% consistency maintained
+🚀 Performance:
+   Average Throughput: 593 RPS
+   Max Throughput: 807 RPS
+   Average Response Time: 431ms
+   Max Response Time: 573ms
+   Average Success Rate: 1%
+   Min Success Rate: 1%
 
-#### **Running All Stress Tests**
-```bash
-# Setup test data
-npm run stress:setup
+📋 Test Results:
+   ✅ 10k-users: completed (good throughput, good response time)
+   ✅ 1k-purchases: completed (good throughput, excellent response time)
+   ✅ 100k-requests: completed (good throughput, excellent response time)
+   ✅ database-stress: completed (fair throughput, excellent response time)
 
-# Run comprehensive stress test suite
-npm run stress:run
-
-# Generate detailed report
-npm run stress:report
+================================================================================
 ```
 
-### **Key Implementation Details**
+### Key Implementation Details
 
-#### **Race Condition Prevention**
+#### Race Condition Prevention
 ```javascript
 // PostgreSQL Advisory Locks for atomic inventory management
 async attemptPurchase(userId) {
@@ -205,7 +188,7 @@ async attemptPurchase(userId) {
 }
 ```
 
-#### **Queue-based Processing**
+#### Queue-based Processing
 ```javascript
 // Hybrid approach: Immediate 202 response + async processing
 async queuePurchase(userId) {
@@ -224,14 +207,14 @@ async queuePurchase(userId) {
 
 ## 🏛️ Database Schema
 
-### **Core Tables**
+### Core Tables
 - **users** - User information with role-based access
 - **products** - Product details (read-heavy)
 - **stocks** - Inventory management with atomic operations
 - **flash_sales** - Sale configuration and timing
 - **orders** - Purchase records and audit trail
 
-### **Key Design Decisions**
+### Key Design Decisions
 1. **Separated Products and Stocks** - Better locking granularity for inventory
 2. **PostgreSQL Advisory Locks** - Atomic inventory operations without table locks
 3. **UUID Primary Keys** - Better for distributed systems and security
@@ -240,7 +223,7 @@ async queuePurchase(userId) {
 
 ## 🚀 Production Deployment
 
-### **Docker Containerization**
+### Docker Containerization
 The system is containerized and ready for production deployment:
 
 ```bash
@@ -248,7 +231,7 @@ The system is containerized and ready for production deployment:
 docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
 ```
 
-### **Environment Configuration**
+### Environment Configuration
 ```bash
 # Required environment variables
 DB_HOST=your-db-host
@@ -259,13 +242,13 @@ REDIS_HOST=your-redis-host
 JWT_SECRET=your-jwt-secret
 ```
 
-### **Scaling Considerations**
+### Scaling Considerations
 - **Horizontal Scaling**: Stateless API design supports load balancing
 - **Database Scaling**: Connection pooling and read replicas ready
 - **Queue Migration**: Abstraction layer supports Bull → Kafka → SQS migration
 - **Caching Strategy**: Redis clustering ready for high availability
 
-### **Monitoring & Observability**
+### Monitoring & Observability
 - **Health Checks**: `/health`, `/health/ready`, `/health/live` endpoints
 - **Structured Logging**: Winston with correlation IDs
 - **Error Tracking**: Comprehensive error handling and reporting
@@ -282,20 +265,20 @@ JWT_SECRET=your-jwt-secret
 
 ## 📊 API Endpoints
 
-### **Flash Sale**
+### Flash Sale
 - `GET /api/flash-sale/status` - Get current sale status with user eligibility
 - `POST /api/purchase` - Queue purchase request (returns 202 immediately)
 
-### **Admin**
+### Admin
 - `POST /api/admin/flash-sale` - Create/update flash sale
 - `GET /api/admin/flash-sale/:id` - Get flash sale details
 - `GET /api/admin/flash-sale/:id/stats` - Get sale statistics
 
-### **Purchase Management**
+### Purchase Management
 - `GET /api/purchase/status` - Check purchase status
 - `GET /api/purchase/user/:userId` - Get user's orders
 
-### **System**
+### System
 - `GET /api/health` - System health check
 - `GET /api/health/ready` - Readiness probe
 - `GET /api/health/live` - Liveness probe
