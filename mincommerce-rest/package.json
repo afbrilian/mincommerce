@@ -18,7 +18,7 @@
     "stress:simple-setup": "node tests/stress/scripts/simple-setup.js",
     "stress:simple-test": "artillery run tests/stress/artillery/simple-test.yml",
     "stress:run": "node tests/stress/scripts/run-all-stress-tests.js",
-    "stress:report": "node tests/stress/scripts/generate-report.js",
+    "stress:report": "node tests/stress/scripts/generate-report.js --all",
     "stress:10k-users": "artillery run tests/stress/artillery/10k-users.yml",
     "stress:1k-purchases": "artillery run tests/stress/artillery/1k-purchases.yml",
     "stress:100k-requests": "artillery run tests/stress/artillery/100k-requests.yml",

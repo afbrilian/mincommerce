@@ -130,6 +130,7 @@ The system includes comprehensive stress testing to validate performance under e
 ```bash
 # Run comprehensive stress test suite and report
 npm run stress:run
+npm run stress:report
 ```
 
 #### Expected Outcomes
