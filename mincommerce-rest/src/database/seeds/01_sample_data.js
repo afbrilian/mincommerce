@@ -63,9 +63,9 @@ exports.seed = async function (knex) {
       {
         sale_id: saleId,
         product_id: products[0].product_id,
-        start_time: new Date(Date.now() + 60000), // 1 minute from now
-        end_time: new Date(Date.now() + 7200000), // 2 hours from now
-        status: 'upcoming'
+        start_time: new Date(Date.now() - 60000), // 1 minute ago (already started)
+        end_time: new Date(Date.now() + 7140000), // 2 hours from now (still active)
+        status: 'active'
       }
     ])
     .returning('*')
