@@ -1,0 +1,81 @@
+config:
+  target: 'http://localhost:3001'
+  phases:
+    # Warm-up phase
+    - duration: 10
+      arrivalRate: 50
+      name: "Warm-up phase"
+    # Ramp-up phase
+    - duration: 30
+      arrivalRate: 200
+      name: "Ramp-up phase"
+    # Peak load phase - 1K concurrent purchases
+    - duration: 60
+      arrivalRate: 1000
+      name: "Peak load - 1K concurrent purchases"
+    # Sustained load phase
+    - duration: 90
+      arrivalRate: 500
+      name: "Sustained load"
+    # Cool-down phase
+    - duration: 30
+      arrivalRate: 100
+      name: "Cool-down phase"
+  defaults:
+    headers:
+      Content-Type: 'application/json'
+  plugins:
+    metrics-by-endpoint:
+      useOnlyRequestNames: true
+  ensure:
+    p95: 3000  # 95th percentile response time should be under 3 seconds
+    maxErrorRate: 5  # Maximum 5% error rate (expected due to stock limits)
+
+scenarios:
+  - name: "Concurrent Purchase Attempts"
+    weight: 100
+    flow:
+      # First, get flash sale status
+      - get:
+          url: "/flash-sale/status"
+          capture:
+            - json: "$.saleId"
+              as: "saleId"
+            - json: "$.productId"
+              as: "productId"
+      - think: 0.5
+      
+      # Authenticate user
+      - post:
+          url: "/auth/login"
+          json:
+            email: "user-{{ $randomString() }}@test.com"
+          capture:
+            - json: "$.token"
+              as: "authToken"
+      - think: 0.5
+      
+      # Attempt purchase (this is the critical test)
+      - post:
+          url: "/purchase"
+          headers:
+            Authorization: "Bearer {{ authToken }}"
+          json:
+            saleId: "{{ saleId }}"
+            productId: "{{ productId }}"
+          capture:
+            - json: "$.success"
+              as: "purchaseSuccess"
+            - json: "$.reason"
+              as: "purchaseReason"
+      - think: 1
+      
+      # Check purchase status
+      - get:
+          url: "/purchase/status"
+          headers:
+            Authorization: "Bearer {{ authToken }}"
+          capture:
+            - json: "$.status"
+              as: "purchaseStatus"
+      - think: 0.5

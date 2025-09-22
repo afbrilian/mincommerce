@@ -1,0 +1,91 @@
+config:
+  target: 'http://localhost:3001'
+  phases:
+    # Warm-up phase
+    - duration: 15
+      arrivalRate: 100
+      name: "Warm-up phase"
+    # Ramp-up phase
+    - duration: 30
+      arrivalRate: 300
+      name: "Ramp-up phase"
+    # Database stress phase - Test connection pool limits
+    - duration: 90
+      arrivalRate: 500
+      name: "Database stress - Connection pool test"
+    # Sustained load phase
+    - duration: 120
+      arrivalRate: 400
+      name: "Sustained database load"
+    # Cool-down phase
+    - duration: 30
+      arrivalRate: 150
+      name: "Cool-down phase"
+  defaults:
+    headers:
+      Content-Type: 'application/json'
+  plugins:
+    metrics-by-endpoint:
+      useOnlyRequestNames: true
+  ensure:
+    p95: 5000  # 95th percentile response time should be under 5 seconds
+    maxErrorRate: 10  # Higher error rate expected due to connection limits
+
+scenarios:
+  - name: "Database Intensive Operations"
+    weight: 40
+    flow:
+      # Multiple database operations in sequence
+      - post:
+          url: "/auth/login"
+          json:
+            email: "user-{{ $randomString() }}@test.com"
+          capture:
+            - json: "$.token"
+              as: "authToken"
+      - get:
+          url: "/flash-sale/status"
+      - post:
+          url: "/purchase"
+          headers:
+            Authorization: "Bearer {{ authToken }}"
+          json:
+            saleId: "test-sale-id"
+            productId: "test-product-id"
+      - get:
+          url: "/purchase/status"
+          headers:
+            Authorization: "Bearer {{ authToken }}"
+      - think: 1
+
+  - name: "Concurrent User Creation"
+    weight: 30
+    flow:
+      - post:
+          url: "/auth/login"
+          json:
+            email: "user-{{ $randomString() }}@test.com"
+      - think: 0.5
+
+  - name: "Flash Sale Status Spam"
+    weight: 20
+    flow:
+      - get:
+          url: "/flash-sale/status"
+      - think: 0.2
+
+  - name: "Purchase Status Checks"
+    weight: 10
+    flow:
+      - post:
+          url: "/auth/login"
+          json:
+            email: "user-{{ $randomString() }}@test.com"
+          capture:
+            - json: "$.token"
+              as: "authToken"
+      - get:
+          url: "/purchase/status"
+          headers:
+            Authorization: "Bearer {{ authToken }}"
+      - think: 0.5

@@ -1,0 +1,94 @@
+config:
+  target: 'http://localhost:3001'
+  phases:
+    # Warm-up phase
+    - duration: 30
+      arrivalRate: 100
+      name: "Warm-up phase"
+    # Ramp-up phase
+    - duration: 60
+      arrivalRate: 500
+      name: "Ramp-up phase"
+    # Peak load phase - 10K concurrent users
+    - duration: 120
+      arrivalRate: 1000
+      name: "Peak load - 10K users"
+    # Sustained load phase
+    - duration: 180
+      arrivalRate: 800
+      name: "Sustained load"
+    # Cool-down phase
+    - duration: 60
+      arrivalRate: 200
+      name: "Cool-down phase"
+  defaults:
+    headers:
+      Content-Type: 'application/json'
+  plugins:
+    metrics-by-endpoint:
+      useOnlyRequestNames: true
+  ensure:
+    p95: 2000  # 95th percentile response time should be under 2 seconds
+    maxErrorRate: 1  # Maximum 1% error rate
+  http:
+    timeout: 30  # 30 second timeout for HTTP requests
+
+scenarios:
+  - name: "Flash Sale Status Check"
+    weight: 40
+    flow:
+      - get:
+          url: "/flash-sale/status"
+          capture:
+            - json: "$.saleId"
+              as: "saleId"
+            - json: "$.productId"
+              as: "productId"
+      - think: 1
+
+  - name: "User Authentication"
+    weight: 30
+    flow:
+      - post:
+          url: "/auth/login"
+          json:
+            email: "{{ $randomString() }}@test.com"
+          capture:
+            - json: "$.token"
+              as: "authToken"
+      - think: 2
+
+  - name: "Purchase Attempt"
+    weight: 20
+    flow:
+      - post:
+          url: "/auth/login"
+          json:
+            email: "{{ $randomString() }}@test.com"
+          capture:
+            - json: "$.token"
+              as: "authToken"
+      - post:
+          url: "/purchase"
+          headers:
+            Authorization: "Bearer {{ authToken }}"
+          json:
+            saleId: "{{ saleId }}"
+            productId: "{{ productId }}"
+      - think: 3
+
+  - name: "Purchase Status Check"
+    weight: 10
+    flow:
+      - post:
+          url: "/auth/login"
+          json:
+            email: "{{ $randomString() }}@test.com"
+          capture:
+            - json: "$.token"
+              as: "authToken"
+      - get:
+          url: "/purchase/status"
+          headers:
+            Authorization: "Bearer {{ authToken }}"
+      - think: 1

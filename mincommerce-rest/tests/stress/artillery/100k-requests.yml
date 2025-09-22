@@ -1,0 +1,75 @@
+config:
+  target: 'http://localhost:3001'
+  phases:
+    # Warm-up phase
+    - duration: 20
+      arrivalRate: 200
+      name: "Warm-up phase"
+    # Ramp-up phase
+    - duration: 40
+      arrivalRate: 500
+      name: "Ramp-up phase"
+    # Peak throughput phase - 100K requests
+    - duration: 120
+      arrivalRate: 1000
+      name: "Peak throughput - 100K requests"
+    # Sustained high load
+    - duration: 180
+      arrivalRate: 800
+      name: "Sustained high load"
+    # Cool-down phase
+    - duration: 40
+      arrivalRate: 300
+      name: "Cool-down phase"
+  defaults:
+    headers:
+      Content-Type: 'application/json'
+  plugins:
+    metrics-by-endpoint:
+      useOnlyRequestNames: true
+  ensure:
+    p95: 1000  # 95th percentile response time should be under 1 second
+    maxErrorRate: 2  # Maximum 2% error rate
+    minRequestRate: 800  # Minimum 800 requests per second
+
+scenarios:
+  - name: "High Frequency Status Checks"
+    weight: 50
+    flow:
+      - get:
+          url: "/flash-sale/status"
+      - think: 0.1  # Very short think time for high frequency
+
+  - name: "Rapid Authentication"
+    weight: 30
+    flow:
+      - post:
+          url: "/auth/login"
+          json:
+            email: "user-{{ $randomString() }}@test.com"
+      - think: 0.2
+
+  - name: "Health Check Spam"
+    weight: 10
+    flow:
+      - get:
+          url: "/health"
+      - think: 0.05  # Very short think time
+
+  - name: "Mixed API Calls"
+    weight: 10
+    flow:
+      - get:
+          url: "/flash-sale/status"
+      - post:
+          url: "/auth/login"
+          json:
+            email: "user-{{ $randomString() }}@test.com"
+          capture:
+            - json: "$.token"
+              as: "authToken"
+      - get:
+          url: "/purchase/status"
+          headers:
+            Authorization: "Bearer {{ authToken }}"
+      - think: 0.3

@@ -1,0 +1,19 @@
+config:
+  target: 'http://localhost:3001'
+  phases:
+    - duration: 10
+      arrivalRate: 5
+      name: "Simple test phase"
+  defaults:
+    headers:
+      Content-Type: 'application/json'
+  http:
+    timeout: 10
+
+scenarios:
+  - name: "Health Check"
+    weight: 100
+    flow:
+      - get:
+          url: "/health"
+      - think: 1
